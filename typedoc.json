@@ -1,0 +1,10 @@
+{
+  "out": "./docs",
+  "excludeExternals": true,
+  "excludePrivate": false,
+  "entryPoints": [
+    "./src/index.ts"
+  ],
+  "disableSources": true,
+  "listInvalidSymbolLinks": true
+}
