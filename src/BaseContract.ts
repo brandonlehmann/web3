@@ -19,7 +19,6 @@
 // SOFTWARE.
 
 import {Contract, ethers, IContractCall, Multicall} from '@brandonlehmann/ethers-providers';
-import {sleep} from './Tools';
 
 export type IContract = ethers.Contract | Contract;
 
@@ -46,24 +45,16 @@ export default class BaseContract {
      * @protected
      */
     protected async retryCall<T>(func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
-        try {
-            return func(...params);
-        } catch (e: any) {
-            if (e.toString().toLowerCase().includes('revert exception')) {
-                throw e;
-            }
-
-            await sleep(1);
-
-            return this.retryCall(func);
-        }
+        return this._contract.retryCall(func, ...params);
     }
 
     /**
      * Returns an interface allowing for us with the multicall method of a provider
+     * @param name
+     * @param params
      */
     public call(name: string, ...params: any[]): IContractCall {
-        return this.contract.callMethod(name, ...params);
+        return this._contract.callMethod(name, ...params);
     }
 
     /**

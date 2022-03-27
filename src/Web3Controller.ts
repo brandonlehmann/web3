@@ -92,6 +92,7 @@ export {ethers, BigNumber, IProviderOptions};
 
 let Web3ControllerSingleton: any;
 
+/** @ignore */
 type ChainlistMap = Map<number, IChainlistChain>;
 
 export default class Web3Controller extends EventEmitter {
@@ -301,7 +302,7 @@ export default class Web3Controller extends EventEmitter {
     public async loadContract (
         contract_address: string,
         contract_abi?: string,
-        provider?: ethers.providers.Provider,
+        provider?: ethers.Signer | ethers.providers.Provider | Multicall,
         chainId?: number,
         force_refresh = false
     ): Promise<Contract> {
@@ -309,10 +310,16 @@ export default class Web3Controller extends EventEmitter {
             contract_abi = await this.fetchABI(contract_address, chainId, force_refresh);
         }
 
+        let contractProvider = provider || this.signer || this.provider;
+
+        if (!(contractProvider instanceof Multicall) && (contractProvider instanceof ethers.providers.Provider)) {
+            contractProvider = await Multicall.create(contractProvider);
+        }
+
         return new Contract(
             contract_address,
             contract_abi,
-            provider || this.signer || this.provider);
+            contractProvider);
     }
 
     /**

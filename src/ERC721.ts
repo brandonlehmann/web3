@@ -18,8 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {BigNumber, ethers} from '@brandonlehmann/ethers-providers';
-import fetch from 'cross-fetch';
+import {BigNumber, ethers, IContractCall} from '@brandonlehmann/ethers-providers';
+import fetch, {Response} from 'cross-fetch';
 import BaseContract, {IContract} from './BaseContract';
 
 export interface IERC721Attribute {
@@ -109,16 +109,42 @@ export default class ERC721 extends BaseContract {
      * @param owner
      */
     public async ownedMetadata(owner: string): Promise<IERC721Metadata[]> {
-        const tokenIds = await this.ownedTokenIds(owner);
+        let tokenIds = await this.ownedTokenIds(owner);
 
-        const promises = [];
+        if (this.contract.multicallProvider) {
+            const uriRequests: {id: ethers.BigNumberish, uri: string}[] = [];
 
-        for (const tokenId of tokenIds) {
-            promises.push(this.metadata(tokenId));
+            while (tokenIds.length !== 0) {
+                const batch = tokenIds.slice(0, 10);
+                tokenIds = tokenIds.slice(10);
+
+                const calls: IContractCall[] = [];
+
+                for (const idx of batch) {
+                    calls.push(this.call('tokenURI', idx));
+                }
+
+                const result = await this.contract.multicallProvider.aggregate<string[]>(calls);
+
+                for (let i = 0 ; i < batch.length; i++) {
+                    uriRequests.push({
+                        id: batch[i],
+                        uri: result[i]
+                    });
+                }
+            }
+
+            return this.metadataBulk(uriRequests);
+        } else {
+            const promises = [];
+
+            for (const tokenId of tokenIds) {
+                promises.push(this.metadata(tokenId));
+            }
+
+            return (await Promise.all(promises))
+                .filter(elem => elem !== undefined);
         }
-
-        return (await Promise.all(promises))
-            .filter(elem => elem !== undefined);
     }
 
     /**
@@ -128,13 +154,41 @@ export default class ERC721 extends BaseContract {
     public async ownedTokenIds(owner: string): Promise<BigNumber[]> {
         const count = (await this.balanceOf(owner)).toNumber();
 
-        const promises = [];
+        if (this.contract.multicallProvider) {
+            const result: BigNumber[] = [];
 
-        for (let i = 0; i < count; i++) {
-            promises.push(this.tokenOfOwnerByIndex(owner, i));
+            let indexes: number[] = [];
+            for (let i = 0; i < count; i++) {
+                indexes.push(i);
+            }
+
+            const promises = [];
+
+            while (indexes.length !== 0) {
+                const calls: IContractCall[] = [];
+                const batch = indexes.slice(0, 10);
+                indexes = indexes.slice(10);
+
+                for (const idx of batch) {
+                    calls.push(this.call('tokenOfOwnerByIndex', owner, idx));
+                }
+
+                promises.push(this.contract.multicallProvider.aggregate(calls));
+            }
+
+            (await Promise.all(promises))
+                .map(outer => outer.map(inner => result.push(inner)));
+
+            return result;
+        } else {
+            const promises = [];
+
+            for (let i = 0; i < count; i++) {
+                promises.push(this.tokenOfOwnerByIndex(owner, i));
+            }
+
+            return Promise.all(promises);
         }
-
-        return Promise.all(promises);
     }
 
     /**
@@ -223,6 +277,49 @@ export default class ERC721 extends BaseContract {
     }
 
     /**
+     * Retrieves bulk metadata
+     *
+     * @param tokens
+     * @protected
+     */
+    protected async metadataBulk(tokens: {id: ethers.BigNumberish, uri: string}[]): Promise<IERC721Metadata[]> {
+        const result: IERC721Metadata[] = [];
+
+        const promises = [];
+
+        const get = async(token: {
+            id: ethers.BigNumberish,
+            uri: string
+        }): Promise<{id: ethers.BigNumberish, response: Response}> => {
+            return {
+                id: token.id,
+                response: await fetch(token.uri)
+            };
+        };
+
+        for (const token of tokens) {
+            promises.push(get(token));
+        }
+
+        const results = await Promise.all(promises);
+
+        for (const r of results) {
+            if (!r.response.ok) {
+                throw new Error('Error fetching metadata');
+            }
+
+            const json: IERC721Metadata = await r.response.json();
+            json.image = json.image.replace('ipfs://', this.IPFSGateway);
+            json.tokenId = (r.id as BigNumber);
+            json.contract = this.contract.address;
+
+            result.push(json);
+        }
+
+        return result;
+    }
+
+    /**
      * An abbreviated name for NFTs in this contract
      */
     public async symbol(): Promise<string> {
@@ -236,6 +333,28 @@ export default class ERC721 extends BaseContract {
      */
     public async tokenByIndex(index: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.tokenByIndex, index);
+    }
+
+    /**
+     * Return the metadata of the token
+     */
+    public async tokenMetadata(): Promise<{
+        address: string,
+        symbol: string,
+        name: string,
+        totalSupply: BigNumber
+    }> {
+        const result = await this.contract.call('symbol')
+            .call('name')
+            .call('totalSupply')
+            .exec();
+
+        return {
+            address: this.contract.address,
+            symbol: result[0],
+            name: result[1],
+            totalSupply: result[2]
+        };
     }
 
     /**

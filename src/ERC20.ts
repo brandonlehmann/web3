@@ -63,6 +63,31 @@ export default class ERC20 extends BaseContract {
     }
 
     /**
+     * Return the metadata of the token
+     */
+    public async tokenMetadata(): Promise<{
+        address: string,
+        symbol: string,
+        name: string,
+        decimals: number,
+        totalSupply: BigNumber
+    }> {
+        const result = await this.contract.call('symbol')
+            .call('name')
+            .call('decimals')
+            .call('totalSupply')
+            .exec();
+
+        return {
+            address: this.contract.address,
+            symbol: result[0],
+            name: result[1],
+            decimals: result[2],
+            totalSupply: result[3]
+        };
+    }
+
+    /**
      * Returns the name of the token - e.g. "MyToken".
      */
     public async name(): Promise<string> {

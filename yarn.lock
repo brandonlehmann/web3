@@ -244,10 +244,10 @@
     "@babel/helper-validator-identifier" "^7.16.7"
     to-fast-properties "^2.0.0"
 
-"@brandonlehmann/ethers-providers@^1.1.5":
-  version "1.1.5"
-  resolved "https://registry.yarnpkg.com/@brandonlehmann/ethers-providers/-/ethers-providers-1.1.5.tgz#c0f2db04ea9836f6a2525e86739280655757a1c1"
-  integrity sha512-YaUSWP++uQ7azL+w6OGWHJsyFhmT08wLiBK6WQGuYiwDQ/T4fZvpAacPjiqiEFvhsKI5v9EfZRUL+1Vzch+HjQ==
+"@brandonlehmann/ethers-providers@^1.1.6":
+  version "1.1.6"
+  resolved "https://registry.yarnpkg.com/@brandonlehmann/ethers-providers/-/ethers-providers-1.1.6.tgz#38ab1ca4c45904d84180c8f05cd17cd4e36bbe44"
+  integrity sha512-YqQuo9WUlasLu2Cbzryz5l1NmeQosIlBCIpSUqgES5ertXCbS72ubRVCBTeL4bsVX8ni8VCmVgPMWgqgoumBmg==
   dependencies:
     cross-fetch "^3.1.5"
     ethers "^5.5.4"
