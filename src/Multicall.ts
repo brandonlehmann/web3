@@ -18,11 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {BigNumber, ethers} from '@brandonlehmann/ethers-providers';
+import { ethers, BigNumber } from 'ethers';
 import BaseContract from './BaseContract';
 
 export default class MultiCall extends BaseContract {
-    public async aggregate(
+    /**
+     * Executes the aggregated calls and returns the results
+     *
+     * @param calls
+     */
+    public async aggregate (
         calls: string[] | ethers.BytesLike[]
     ): Promise<{blockNumber: BigNumber, returnData: string[]}> {
         const [blockNumber, returnData] = await this.retryCall(this.contract.aggregate, calls);
@@ -33,31 +38,55 @@ export default class MultiCall extends BaseContract {
         };
     }
 
-    public async getEthBalance(address: string): Promise<BigNumber> {
+    /**
+     * Retrieves the balance of the specified account
+     *
+     * @param address
+     */
+    public async getEthBalance (address: string): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.getEthBalance, address);
     }
 
-    public async getBlockHash(blockNumber: ethers.BigNumberish): Promise<string> {
+    /**
+     * Retrieves the hash of the specified block height
+     * @param blockNumber
+     */
+    public async getBlockHash (blockNumber: ethers.BigNumberish): Promise<string> {
         return this.retryCall<string>(this.contract.getBlockHash, blockNumber);
     }
 
-    public async getLastBlockHash(): Promise<string> {
+    /**
+     * Retrieves the last block hash
+     */
+    public async getLastBlockHash (): Promise<string> {
         return this.retryCall<string>(this.contract.getLastBlockHash);
     }
 
-    public async getCurrentBlockTimestamp(): Promise<BigNumber> {
+    /**
+     * Retrieves the current block timestamp
+     */
+    public async getCurrentBlockTimestamp (): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.getCurrentBlockTimestamp);
     }
 
-    public async getCurrentBlockDifficulty(): Promise<BigNumber> {
+    /**
+     * Retrieves the current block difficulty
+     */
+    public async getCurrentBlockDifficulty (): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.getCurrentBlockDifficulty);
     }
 
-    public async getCurrentBlockGasLimit(): Promise<BigNumber> {
+    /**
+     * Retrieves the current block gas limit
+     */
+    public async getCurrentBlockGasLimit (): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.getCurrentBlockGasLimit);
     }
 
-    public async getCurrentBlockCoinbase(): Promise<string> {
+    /**
+     * Retrieves the current block's coinbase address
+     */
+    public async getCurrentBlockCoinbase (): Promise<string> {
         return this.retryCall<string>(this.contract.getCurrentBlockCoinbase);
     }
 }

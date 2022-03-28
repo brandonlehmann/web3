@@ -21,7 +21,7 @@
 import $ from 'jquery';
 import 'gasparesganga-jquery-loading-overlay';
 
-export {$};
+export { $ };
 
 /**
  * Creates a new element in the DOM
@@ -83,7 +83,7 @@ export class Overlay {
     /**
      * Hides the displayed overlay
      */
-    public static hide() {
+    public static hide () {
         $(document.body).LoadingOverlay('hide');
     }
 
@@ -92,7 +92,7 @@ export class Overlay {
      * @param text
      * @param options
      */
-    public static show(text: string, options?: ILoadingOverlayOptions) {
+    public static show (text: string, options?: ILoadingOverlayOptions) {
         $(document.body).LoadingOverlay('show', options);
     }
 }

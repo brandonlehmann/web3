@@ -165,7 +165,6 @@ crashlytics-build.properties
 fabric.properties
 
 # do not commit files in dist
-test.ts
 test.db
 .idea/
 *.sqlite3

@@ -18,19 +18,29 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import ERC20, {MaxApproval} from './ERC20';
-import ERC721, {IERC721Metadata, IERC721Attribute} from './ERC721';
-import ERC1155, {IERC1155Metadata, IERC1155Properties} from './ERC1155';
+import ABI from './ABI';
+import BaseContract, { IContract } from './BaseContract';
+import Contract, { IContractCall } from './Contract';
+import ERC20, { MaxApproval } from './ERC20';
+import ERC721, { IERC721Metadata, IERC721Attribute } from './ERC721';
+import ERC1155, { IERC1155Metadata, IERC1155Properties } from './ERC1155';
 import MultiCall from './Multicall';
-import BaseContract from './BaseContract';
-import Web3Controller, {DefaultProviderOptions, IProviderOptions, NullAddress} from './Web3Controller';
-import {ethers, BigNumber, Contract, Multicall} from '@brandonlehmann/ethers-providers';
+import { multicallAddresses, multicallAbi } from './MulticallAddresses';
+import MulticallProvider from './MulticallProvider';
+import { sleep } from './Tools';
+import Web3Controller, {
+    DefaultProviderOptions,
+    IProviderOptions,
+    NullAddress,
+    IWeb3ControllerOptions
+} from './Web3Controller';
+import { ethers, BigNumber } from 'ethers';
 import Metronome from 'node-metronome';
 import numeral from 'numeral';
-import {sleep} from './Tools';
-import fetch, {Headers, Request, Response} from 'cross-fetch';
+import fetch, { Headers, Request, Response } from 'cross-fetch';
 
 export {
+    ABI,
     fetch,
     Headers,
     Request,
@@ -41,21 +51,26 @@ export {
     MaxApproval,
     NullAddress,
     Contract,
-    Multicall,
+    MultiCall,
+    MulticallProvider,
     IERC721Metadata,
     IERC721Attribute,
+    multicallAddresses,
+    multicallAbi,
     ERC1155,
     IERC1155Metadata,
     IERC1155Properties,
     Web3Controller,
-    MultiCall,
     DefaultProviderOptions,
     IProviderOptions,
+    IContract,
+    IWeb3ControllerOptions,
     ethers,
     BigNumber,
     Metronome,
     numeral,
-    sleep
+    sleep,
+    IContractCall
 };
 
 export default Web3Controller;

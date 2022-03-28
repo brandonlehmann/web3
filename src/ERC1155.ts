@@ -18,9 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {BigNumber, ethers} from '@brandonlehmann/ethers-providers';
+import { ethers, BigNumber } from 'ethers';
 import fetch from 'cross-fetch';
-import BaseContract, {IContract} from './BaseContract';
+import BaseContract, { IContract } from './BaseContract';
 
 export interface IERC1155Properties {
     [key: string]: string | number | object;
@@ -37,7 +37,7 @@ export interface IERC1155Metadata {
 }
 
 export default class ERC1155 extends BaseContract {
-    constructor(
+    constructor (
         _contract: IContract,
         public IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
     ) {
@@ -49,7 +49,7 @@ export default class ERC1155 extends BaseContract {
      * @param owner
      * @param id
      */
-    public async balanceOf(owner: string, id: ethers.BigNumberish): Promise<BigNumber> {
+    public async balanceOf (owner: string, id: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.balanceOf, owner, id);
     }
 
@@ -58,7 +58,7 @@ export default class ERC1155 extends BaseContract {
      * @param owners
      * @param ids
      */
-    public async balanceOfBatch(owners: string[], ids: ethers.BigNumberish[]): Promise<ethers.BigNumberish[]> {
+    public async balanceOfBatch (owners: string[], ids: ethers.BigNumberish[]): Promise<ethers.BigNumberish[]> {
         return this.retryCall<ethers.BigNumberish[]>(this.contract.balanceOfBatch, owners, ids);
     }
 
@@ -66,7 +66,7 @@ export default class ERC1155 extends BaseContract {
      * Indicates whether any token exist with a given id, or not.
      * @param id
      */
-    public async exists(id: ethers.BigNumberish): Promise<boolean> {
+    public async exists (id: ethers.BigNumberish): Promise<boolean> {
         return this.retryCall<boolean>(this.contract.exists, id);
     }
 
@@ -75,7 +75,7 @@ export default class ERC1155 extends BaseContract {
      * @param owner
      * @param operator
      */
-    public async isApprovedForAll(owner: string, operator: string): Promise<boolean> {
+    public async isApprovedForAll (owner: string, operator: string): Promise<boolean> {
         return this.retryCall<boolean>(this.contract.isApprovedForAll, owner, operator);
     }
 
@@ -83,7 +83,7 @@ export default class ERC1155 extends BaseContract {
      * Fetches the metadata for the specified token ID
      * @param id
      */
-    public async metadata(id: ethers.BigNumberish): Promise<IERC1155Metadata> {
+    public async metadata (id: ethers.BigNumberish): Promise<IERC1155Metadata> {
         const uri = await this.uri(id);
 
         const response = await fetch(uri);
@@ -112,7 +112,7 @@ export default class ERC1155 extends BaseContract {
      * @param values
      * @param data
      */
-    public async safeBatchTransferFrom(
+    public async safeBatchTransferFrom (
         from: string,
         to: string,
         ids: ethers.BigNumberish[],
@@ -130,7 +130,7 @@ export default class ERC1155 extends BaseContract {
      * @param value
      * @param data
      */
-    public async safeTransferFrom(
+    public async safeTransferFrom (
         from: string,
         to: string,
         id: ethers.BigNumberish,
@@ -145,14 +145,14 @@ export default class ERC1155 extends BaseContract {
      * @param operator
      * @param approved
      */
-    public async setApprovalForAll(operator: string, approved = true): Promise<ethers.ContractTransaction> {
+    public async setApprovalForAll (operator: string, approved = true): Promise<ethers.ContractTransaction> {
         return this.contract.setApprovalForAll(operator, approved);
     }
 
     /**
      * Returns the total amount of tokens stored by the contract.
      */
-    public async totalSupply(id: ethers.BigNumberish): Promise<BigNumber> {
+    public async totalSupply (id: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.totalSupply, id);
     }
 
@@ -160,7 +160,7 @@ export default class ERC1155 extends BaseContract {
      * A distinct Uniform Resource Identifier (URI) for a given token.
      * @param id
      */
-    public async uri(id: ethers.BigNumberish): Promise<any> {
+    public async uri (id: ethers.BigNumberish): Promise<any> {
         const uri = await this.retryCall<string>(this.contract.uri, id);
 
         return uri.replace('ipfs://', this.IPFSGateway);

@@ -22,5 +22,5 @@
  * Sleeps for the specified time
  * @param timeout in seconds
  */
-export const sleep = async(timeout: number) =>
+export const sleep = async (timeout: number) =>
     new Promise(resolve => setTimeout(resolve, timeout * 1000));

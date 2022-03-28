@@ -18,7 +18,8 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {BigNumber, ethers} from '@brandonlehmann/ethers-providers';
+import { BigNumber, ethers } from 'ethers';
+import { IContractCall } from './Contract';
 import BaseContract from './BaseContract';
 
 export const MaxApproval = BigNumber.from(
@@ -30,7 +31,7 @@ export default class ERC20 extends BaseContract {
      * @param owner
      * @param spender
      */
-    public async allowance(owner: string, spender: string): Promise<BigNumber> {
+    public async allowance (owner: string, spender: string): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.allowance, owner, spender);
     }
 
@@ -55,17 +56,65 @@ export default class ERC20 extends BaseContract {
     }
 
     /**
+     * Returns the balances for each of the provided accounts
+     *
+     * @param accounts
+     */
+    public async balanceOfBatch (accounts: string[]): Promise<{owner: string, balance: BigNumber}[]> {
+        if (this.contract.multicallProvider) {
+            const results: {owner: string, balance: BigNumber}[] = [];
+
+            while (accounts.length !== 0) {
+                const batch = accounts.slice(0, 50);
+                accounts = accounts.slice(50);
+
+                const calls: IContractCall[] = [];
+
+                for (const owner of batch) {
+                    calls.push(this.call('balanceOf', owner));
+                }
+
+                const result = await this.contract.multicallProvider.aggregate(calls);
+
+                for (let i = 0; i < batch.length; i++) {
+                    results.push({
+                        owner: batch[i],
+                        balance: result[i]
+                    });
+                }
+            }
+
+            return results;
+        } else {
+            const promises = [];
+
+            const get = async (owner: string): Promise<{owner: string, balance: BigNumber}> => {
+                return {
+                    owner: owner,
+                    balance: await this.balanceOf(owner)
+                };
+            };
+
+            for (const owner of accounts) {
+                promises.push(get(owner));
+            }
+
+            return Promise.all(promises);
+        }
+    }
+
+    /**
      * Returns the number of decimals the token uses - e.g. 8, means to divide the
      * token amount by 100000000 to get its user representation.
      */
-    public async decimals(): Promise<number> {
+    public async decimals (): Promise<number> {
         return this.retryCall<number>(this.contract.decimals);
     }
 
     /**
      * Return the metadata of the token
      */
-    public async tokenMetadata(): Promise<{
+    public async tokenMetadata (): Promise<{
         address: string,
         symbol: string,
         name: string,
@@ -90,21 +139,21 @@ export default class ERC20 extends BaseContract {
     /**
      * Returns the name of the token - e.g. "MyToken".
      */
-    public async name(): Promise<string> {
+    public async name (): Promise<string> {
         return this.retryCall<string>(this.contract.name);
     }
 
     /**
      * Returns the symbol of the token. E.g. “HIX”.
      */
-    public async symbol(): Promise<string> {
+    public async symbol (): Promise<string> {
         return this.retryCall<string>(this.contract.symbol);
     }
 
     /**
      * Returns the total token supply
      */
-    public async totalSupply(): Promise<BigNumber> {
+    public async totalSupply (): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.totalSupply);
     }
 
@@ -113,7 +162,7 @@ export default class ERC20 extends BaseContract {
      * @param to
      * @param value
      */
-    public async transfer(to: string, value: ethers.BigNumberish): Promise<ethers.ContractTransaction> {
+    public async transfer (to: string, value: ethers.BigNumberish): Promise<ethers.ContractTransaction> {
         return this.contract.transfer(to, value);
     }
 
@@ -123,7 +172,7 @@ export default class ERC20 extends BaseContract {
      * @param to
      * @param value
      */
-    public async transferFrom(
+    public async transferFrom (
         from: string,
         to: string,
         value: ethers.BigNumberish

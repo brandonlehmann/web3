@@ -18,14 +18,16 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Web3Modal, {IProviderOptions} from 'web3modal';
-import {ethers, BigNumber, Multicall, Contract, IContractCall} from '@brandonlehmann/ethers-providers';
-import {EventEmitter} from 'events';
+import Web3Modal, { IProviderOptions } from 'web3modal';
+import { ethers, BigNumber } from 'ethers';
+import MulticallProvider from './MulticallProvider';
+import Contract, { IContractCall } from './Contract';
+import { EventEmitter } from 'events';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import {WalletLink} from 'walletlink/dist/WalletLink';
+import { WalletLink } from 'walletlink/dist/WalletLink';
 import Metronome from 'node-metronome';
 import * as ls from 'local-storage';
-import {sleep} from './Tools';
+import { sleep } from './Tools';
 import fetch from 'cross-fetch';
 
 export const NullAddress = '0x0000000000000000000000000000000000000000';
@@ -51,6 +53,12 @@ interface IChainlistChain {
     rpc: string[];
     shortName: string;
     slip44: number;
+}
+
+export interface IWeb3ControllerOptions {
+    providerOptions?: IProviderOptions,
+    chainId?: number,
+    cacheProvider?: boolean
 }
 
 export const DefaultProviderOptions: IProviderOptions = {
@@ -88,7 +96,7 @@ export const DefaultProviderOptions: IProviderOptions = {
     }
 };
 
-export {ethers, BigNumber, IProviderOptions};
+export { ethers, BigNumber, IProviderOptions };
 
 let Web3ControllerSingleton: any;
 
@@ -97,17 +105,17 @@ type ChainlistMap = Map<number, IChainlistChain>;
 
 export default class Web3Controller extends EventEmitter {
     private _connected = false;
-    private _instance?: Multicall;
+    private _instance?: MulticallProvider;
     private _signer?: ethers.Signer;
     public modal?: Web3Modal;
     private _checkTimer?: Metronome;
 
-    protected constructor(
+    protected constructor (
         public readonly appName: string,
         private readonly providerOptions: IProviderOptions = DefaultProviderOptions,
         public readonly cacheProvider = false,
         private readonly _chains: ChainlistMap,
-        private readonly _defaultProvider?: Multicall
+        private readonly _defaultProvider?: MulticallProvider
     ) {
         super();
 
@@ -136,24 +144,24 @@ export default class Web3Controller extends EventEmitter {
      * Loads the singleton instance of the widget controller
      *
      * @param appName
-     * @param providerOptions
-     * @param cacheProvider
-     * @param chainId
+     * @param options
      */
     public static async load (
         appName = 'Unknown Application',
-        providerOptions: IProviderOptions = DefaultProviderOptions,
-        chainId?: number,
-        cacheProvider = false
+        options?: IWeb3ControllerOptions
     ): Promise<Web3Controller> {
         if (Web3ControllerSingleton) {
             return Web3ControllerSingleton;
         }
 
+        options = options || {};
+        options.providerOptions = options.providerOptions || DefaultProviderOptions;
+        options.cacheProvider = (typeof options.cacheProvider === 'undefined') ? false : options.cacheProvider;
+
         const chains = await Web3Controller.getChains();
 
-        if (chainId) {
-            const entry = chains.get(chainId);
+        if (options.chainId) {
+            const entry = chains.get(options.chainId);
 
             if (entry) {
                 entry.rpc = entry.rpc.filter(elem => !elem.includes('$'));
@@ -162,10 +170,10 @@ export default class Web3Controller extends EventEmitter {
                     const provider = new ethers.providers.JsonRpcProvider(entry.rpc[0]);
                     const instance = new Web3Controller(
                         appName,
-                        providerOptions,
-                        cacheProvider,
+                        options.providerOptions,
+                        options.cacheProvider,
                         chains,
-                        await Multicall.create(provider)
+                        await MulticallProvider.create(provider)
                     );
                     Web3ControllerSingleton = instance;
                     return instance;
@@ -173,7 +181,7 @@ export default class Web3Controller extends EventEmitter {
             }
         }
 
-        const instance = new Web3Controller(appName, providerOptions, cacheProvider, chains);
+        const instance = new Web3Controller(appName, options.providerOptions, options.cacheProvider, chains);
 
         Web3ControllerSingleton = instance;
 
@@ -224,7 +232,7 @@ export default class Web3Controller extends EventEmitter {
     /**
      * Returns if there is a cached provider present
      */
-    public get isCached(): boolean {
+    public get isCached (): boolean {
         if (!this.modal) {
             return false;
         }
@@ -301,8 +309,8 @@ export default class Web3Controller extends EventEmitter {
      */
     public async loadContract (
         contract_address: string,
-        contract_abi?: string,
-        provider?: ethers.Signer | ethers.providers.Provider | Multicall,
+        contract_abi?: ethers.ContractInterface,
+        provider?: ethers.Signer | ethers.providers.Provider | MulticallProvider,
         chainId?: number,
         force_refresh = false
     ): Promise<Contract> {
@@ -312,8 +320,9 @@ export default class Web3Controller extends EventEmitter {
 
         let contractProvider = provider || this.signer || this.provider;
 
-        if (!(contractProvider instanceof Multicall) && (contractProvider instanceof ethers.providers.Provider)) {
-            contractProvider = await Multicall.create(contractProvider);
+        if (!(contractProvider instanceof MulticallProvider) &&
+            (contractProvider instanceof ethers.providers.Provider)) {
+            contractProvider = await MulticallProvider.create(contractProvider);
         }
 
         return new Contract(
@@ -334,7 +343,7 @@ export default class Web3Controller extends EventEmitter {
             this.providerOptions['custom-walletlink'].options.appName = this.appName;
         }
 
-        for (const [,chain] of this._chains) {
+        for (const [, chain] of this._chains) {
             if (chain.rpc.length !== 0) {
                 if (this.providerOptions.walletconnect) {
                     this.providerOptions.walletconnect.options.rpc[chain.chainId] = chain.rpc[0];
@@ -385,7 +394,7 @@ export default class Web3Controller extends EventEmitter {
 
         const instance = new ethers.providers.Web3Provider(_instance as any);
 
-        this._instance = await Multicall.create(instance);
+        this._instance = await MulticallProvider.create(instance);
 
         this._signer = instance.getSigner();
 
@@ -478,11 +487,11 @@ export default class Web3Controller extends EventEmitter {
      *
      * @param calls
      */
-    public async multicall<Type extends any[] = any[]>(calls: IContractCall[]): Promise<Type> {
+    public async multicall<Type extends any[] = any[]> (calls: IContractCall[]): Promise<Type> {
         if (this.connected && this._instance) {
-            return this._instance?.multicall(calls);
+            return this._instance?.aggregate(calls);
         } else if (this._defaultProvider) {
-            return this._defaultProvider.multicall(calls);
+            return this._defaultProvider.aggregate(calls);
         }
 
         throw new Error('Provider not connected');

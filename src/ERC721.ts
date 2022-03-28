@@ -18,9 +18,10 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {BigNumber, ethers, IContractCall} from '@brandonlehmann/ethers-providers';
-import fetch, {Response} from 'cross-fetch';
-import BaseContract, {IContract} from './BaseContract';
+import { ethers, BigNumber } from 'ethers';
+import { IContractCall } from './Contract';
+import fetch, { Response } from 'cross-fetch';
+import BaseContract, { IContract } from './BaseContract';
 
 export interface IERC721Attribute {
     trait_type: string;
@@ -53,7 +54,7 @@ export interface IERC721Metadata {
 }
 
 export default class ERC721 extends BaseContract {
-    constructor(
+    constructor (
         _contract: IContract,
         public IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
     ) {
@@ -65,7 +66,7 @@ export default class ERC721 extends BaseContract {
      * @param approved
      * @param tokenId
      */
-    public async approve(
+    public async approve (
         approved: string,
         tokenId: ethers.BigNumberish
     ): Promise<ethers.ContractTransaction> {
@@ -76,15 +77,63 @@ export default class ERC721 extends BaseContract {
      * Count all NFTs assigned to an owner
      * @param owner
      */
-    public async balanceOf(owner: string): Promise<BigNumber> {
+    public async balanceOf (owner: string): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.balanceOf, owner);
+    }
+
+    /**
+     * Returns the balances for each of the provided accounts
+     *
+     * @param accounts
+     */
+    public async balanceOfBatch (accounts: string[]): Promise<{owner: string, balance: BigNumber}[]> {
+        if (this.contract.multicallProvider) {
+            const results: {owner: string, balance: BigNumber}[] = [];
+
+            while (accounts.length !== 0) {
+                const batch = accounts.slice(0, 50);
+                accounts = accounts.slice(50);
+
+                const calls: IContractCall[] = [];
+
+                for (const owner of batch) {
+                    calls.push(this.call('balanceOf', owner));
+                }
+
+                const result = await this.contract.multicallProvider.aggregate(calls);
+
+                for (let i = 0; i < batch.length; i++) {
+                    results.push({
+                        owner: batch[i],
+                        balance: result[i]
+                    });
+                }
+            }
+
+            return results;
+        } else {
+            const promises = [];
+
+            const get = async (owner: string): Promise<{owner: string, balance: BigNumber}> => {
+                return {
+                    owner: owner,
+                    balance: await this.balanceOf(owner)
+                };
+            };
+
+            for (const owner of accounts) {
+                promises.push(get(owner));
+            }
+
+            return Promise.all(promises);
+        }
     }
 
     /**
      * Get the approved address for a single NFT
      * @param tokenId
      */
-    public async getApproved(tokenId: ethers.BigNumberish): Promise<string> {
+    public async getApproved (tokenId: ethers.BigNumberish): Promise<string> {
         return this.retryCall<string>(this.contract.getApproved, tokenId);
     }
 
@@ -93,14 +142,14 @@ export default class ERC721 extends BaseContract {
      * @param owner
      * @param operator
      */
-    public async isApprovedForAll(owner: string, operator: string): Promise<boolean> {
+    public async isApprovedForAll (owner: string, operator: string): Promise<boolean> {
         return this.retryCall<boolean>(this.contract.isApprovedForAll, owner, operator);
     }
 
     /**
      * A descriptive name for a collection of NFTs in this contract
      */
-    public async name(): Promise<string> {
+    public async name (): Promise<string> {
         return this.retryCall<string>(this.contract.name);
     }
 
@@ -108,7 +157,7 @@ export default class ERC721 extends BaseContract {
      * Returns the metadata for all NFTs owned by the specified account
      * @param owner
      */
-    public async ownedMetadata(owner: string): Promise<IERC721Metadata[]> {
+    public async ownedMetadata (owner: string): Promise<IERC721Metadata[]> {
         let tokenIds = await this.ownedTokenIds(owner);
 
         if (this.contract.multicallProvider) {
@@ -126,7 +175,7 @@ export default class ERC721 extends BaseContract {
 
                 const result = await this.contract.multicallProvider.aggregate<string[]>(calls);
 
-                for (let i = 0 ; i < batch.length; i++) {
+                for (let i = 0; i < batch.length; i++) {
                     uriRequests.push({
                         id: batch[i],
                         uri: result[i]
@@ -151,7 +200,7 @@ export default class ERC721 extends BaseContract {
      * Returns an array of token IDs owned by the specified account
      * @param owner
      */
-    public async ownedTokenIds(owner: string): Promise<BigNumber[]> {
+    public async ownedTokenIds (owner: string): Promise<BigNumber[]> {
         const count = (await this.balanceOf(owner)).toNumber();
 
         if (this.contract.multicallProvider) {
@@ -195,7 +244,7 @@ export default class ERC721 extends BaseContract {
      * Find the owner of an NFT
      * @param tokenId
      */
-    public async ownerOf(tokenId: ethers.BigNumberish): Promise<string> {
+    public async ownerOf (tokenId: ethers.BigNumberish): Promise<string> {
         return this.retryCall<string>(this.contract.ownerOf, tokenId);
     }
 
@@ -205,7 +254,7 @@ export default class ERC721 extends BaseContract {
      * @param tokenId
      * @param salePrice
      */
-    public async royaltyInfo(
+    public async royaltyInfo (
         tokenId: ethers.BigNumberish,
         salePrice: ethers.BigNumberish
     ): Promise<{receiver: string, royaltyAmount: BigNumber}> {
@@ -228,7 +277,7 @@ export default class ERC721 extends BaseContract {
      * @param tokenId
      * @param data
      */
-    public async safeTransferFrom(
+    public async safeTransferFrom (
         from: string,
         to: string,
         tokenId: ethers.BigNumberish,
@@ -247,7 +296,7 @@ export default class ERC721 extends BaseContract {
      * @param operator
      * @param approved
      */
-    public async setApprovalForAll(
+    public async setApprovalForAll (
         operator: string,
         approved = true
     ): Promise<ethers.ContractTransaction> {
@@ -258,7 +307,7 @@ export default class ERC721 extends BaseContract {
      * Fetches the metadata for the specified token ID
      * @param tokenId
      */
-    public async metadata(tokenId: ethers.BigNumberish): Promise<IERC721Metadata> {
+    public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721Metadata> {
         const uri = await this.tokenURI(tokenId);
 
         const response = await fetch(uri);
@@ -282,12 +331,12 @@ export default class ERC721 extends BaseContract {
      * @param tokens
      * @protected
      */
-    protected async metadataBulk(tokens: {id: ethers.BigNumberish, uri: string}[]): Promise<IERC721Metadata[]> {
+    protected async metadataBulk (tokens: {id: ethers.BigNumberish, uri: string}[]): Promise<IERC721Metadata[]> {
         const result: IERC721Metadata[] = [];
 
         const promises = [];
 
-        const get = async(token: {
+        const get = async (token: {
             id: ethers.BigNumberish,
             uri: string
         }): Promise<{id: ethers.BigNumberish, response: Response}> => {
@@ -322,7 +371,7 @@ export default class ERC721 extends BaseContract {
     /**
      * An abbreviated name for NFTs in this contract
      */
-    public async symbol(): Promise<string> {
+    public async symbol (): Promise<string> {
         return this.retryCall<string>(this.contract.symbol);
     }
 
@@ -331,14 +380,14 @@ export default class ERC721 extends BaseContract {
      * Use along with {totalSupply} to enumerate all tokens.
      * @param index
      */
-    public async tokenByIndex(index: ethers.BigNumberish): Promise<BigNumber> {
+    public async tokenByIndex (index: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.tokenByIndex, index);
     }
 
     /**
      * Return the metadata of the token
      */
-    public async tokenMetadata(): Promise<{
+    public async tokenMetadata (): Promise<{
         address: string,
         symbol: string,
         name: string,
@@ -363,7 +412,7 @@ export default class ERC721 extends BaseContract {
      * @param owner
      * @param index
      */
-    public async tokenOfOwnerByIndex(owner: string, index: ethers.BigNumberish): Promise<BigNumber> {
+    public async tokenOfOwnerByIndex (owner: string, index: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.tokenOfOwnerByIndex, owner, index);
     }
 
@@ -371,7 +420,7 @@ export default class ERC721 extends BaseContract {
      * A distinct Uniform Resource Identifier (URI) for a given asset.
      * @param tokenId
      */
-    public async tokenURI(tokenId: ethers.BigNumberish): Promise<string> {
+    public async tokenURI (tokenId: ethers.BigNumberish): Promise<string> {
         const uri = await this.retryCall<string>(this.contract.tokenURI, tokenId);
 
         return uri.replace('ipfs://', this.IPFSGateway);
@@ -380,7 +429,7 @@ export default class ERC721 extends BaseContract {
     /**
      * Returns the total amount of tokens stored by the contract.
      */
-    public async totalSupply(): Promise<BigNumber> {
+    public async totalSupply (): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.totalSupply);
     }
 
@@ -392,7 +441,7 @@ export default class ERC721 extends BaseContract {
      * @param to
      * @param tokenId
      */
-    public async transferFrom(
+    public async transferFrom (
         from: string,
         to: string,
         tokenId: ethers.BigNumberish

@@ -18,18 +18,30 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import {Contract, ethers, IContractCall, Multicall} from '@brandonlehmann/ethers-providers';
+import Contract, { IContractCall } from './Contract';
+import { ethers } from 'ethers';
+import MulticallProvider from './MulticallProvider';
 
 export type IContract = ethers.Contract | Contract;
 
 export default class BaseContract {
     private _contract: Contract;
 
-    public get contract(): Contract {
+    /**
+     * Returns the contract address
+     */
+    public get address (): string {
+        return this._contract.address;
+    }
+
+    /**
+     * Returns the underlying contract interface
+     */
+    public get contract (): Contract {
         return this._contract;
     }
 
-    constructor(_contract: IContract) {
+    constructor (_contract: IContract) {
         if (!(_contract instanceof Contract)) {
             this._contract = new Contract(_contract.address, _contract.interface, _contract.provider);
         } else {
@@ -44,7 +56,7 @@ export default class BaseContract {
      * @param params
      * @protected
      */
-    protected async retryCall<T>(func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
+    protected async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
         return this._contract.retryCall(func, ...params);
     }
 
@@ -53,7 +65,7 @@ export default class BaseContract {
      * @param name
      * @param params
      */
-    public call(name: string, ...params: any[]): IContractCall {
+    public call (name: string, ...params: any[]): IContractCall {
         return this._contract.callMethod(name, ...params);
     }
 
@@ -62,7 +74,7 @@ export default class BaseContract {
      *
      * @param signerOrProvider
      */
-    public connect(signerOrProvider: ethers.Signer | ethers.providers.Provider | Multicall) {
+    public connect (signerOrProvider: ethers.Signer | ethers.providers.Provider | MulticallProvider) {
         this._contract = new Contract(this._contract.address, this._contract.interface, signerOrProvider);
     }
 }

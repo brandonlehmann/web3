@@ -1,6 +1,6 @@
 {
   "name": "@brandonlehmann/web3",
-  "version": "0.1.11",
+  "version": "1.0.0",
   "description": "",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,8 +13,8 @@
     "build:typescript": "./node_modules/.bin/tsc",
     "build:webpack": "./node_modules/.bin/webpack",
     "test": "yarn test:style",
-    "test:style": "./node_modules/.bin/eslint src/**/*.ts",
-    "fix:style": "./node_modules/.bin/eslint --fix src/**/*.ts",
+    "test:style": "./node_modules/.bin/eslint src/**/*.ts test/**/*.ts",
+    "fix:style": "./node_modules/.bin/eslint --fix src/**/*.ts test/**/*.ts",
     "prepublishOnly": "yarn build"
   },
   "repository": {
@@ -32,9 +32,10 @@
     "@typescript-eslint/eslint-plugin": "^5.13.0",
     "@typescript-eslint/parser": "^5.13.0",
     "eslint": "7",
+    "eslint-config-standard": "^16.0.3",
     "eslint-plugin-import": "^2.25.4",
     "eslint-plugin-node": "^11.1.0",
-    "eslint-plugin-promise": "^6.0.0",
+    "eslint-plugin-promise": "5",
     "eslint-plugin-standard": "^5.0.0",
     "ts-node": "^10.6.0",
     "typedoc": "^0.22.13",
@@ -44,7 +45,6 @@
   },
   "dependencies": {
     "@babel/core": "^7.17.5",
-    "@brandonlehmann/ethers-providers": "^1.1.6",
     "@popperjs/core": "^2.11.2",
     "@types/bootstrap": "^5.1.9",
     "@types/jquery": "^3.5.14",
@@ -58,6 +58,7 @@
     "crypto-browserify": "^3.12.0",
     "css-loader": "^6.7.0",
     "encoding": "^0.1.13",
+    "ethers": "^5.6.2",
     "expose-loader": "^3.1.0",
     "gasparesganga-jquery-loading-overlay": "https://github.com/brandonlehmann/jquery-loading-overlay",
     "https-browserify": "^1.0.0",
