@@ -90,24 +90,19 @@ export default class ERC721 extends BaseContract {
         if (this.contract.multicallProvider) {
             const results: {owner: string, balance: BigNumber}[] = [];
 
-            while (accounts.length !== 0) {
-                const batch = accounts.slice(0, 50);
-                accounts = accounts.slice(50);
+            const calls: IContractCall[] = [];
 
-                const calls: IContractCall[] = [];
+            for (const account of accounts) {
+                calls.push(this.call('balanceOf', account));
+            }
 
-                for (const owner of batch) {
-                    calls.push(this.call('balanceOf', owner));
-                }
+            const balances = await this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
 
-                const result = await this.contract.multicallProvider.aggregate(calls);
-
-                for (let i = 0; i < batch.length; i++) {
-                    results.push({
-                        owner: batch[i],
-                        balance: result[i]
-                    });
-                }
+            for (let i = 0; i < accounts.length; i++) {
+                results.push({
+                    owner: accounts[i],
+                    balance: balances[i]
+                });
             }
 
             return results;
@@ -158,29 +153,24 @@ export default class ERC721 extends BaseContract {
      * @param owner
      */
     public async ownedMetadata (owner: string): Promise<IERC721Metadata[]> {
-        let tokenIds = await this.ownedTokenIds(owner);
+        const tokenIds = await this.ownedTokenIds(owner);
 
         if (this.contract.multicallProvider) {
             const uriRequests: {id: ethers.BigNumberish, uri: string}[] = [];
 
-            while (tokenIds.length !== 0) {
-                const batch = tokenIds.slice(0, 10);
-                tokenIds = tokenIds.slice(10);
+            const calls: IContractCall[] = [];
 
-                const calls: IContractCall[] = [];
+            for (const tokenId of tokenIds) {
+                calls.push(this.call('tokenURI', tokenId));
+            }
 
-                for (const idx of batch) {
-                    calls.push(this.call('tokenURI', idx));
-                }
+            const uris = await this.contract.multicallProvider.aggregate<string[]>(calls);
 
-                const result = await this.contract.multicallProvider.aggregate<string[]>(calls);
-
-                for (let i = 0; i < batch.length; i++) {
-                    uriRequests.push({
-                        id: batch[i],
-                        uri: result[i]
-                    });
-                }
+            for (let i = 0; i < tokenIds.length; i++) {
+                uriRequests.push({
+                    id: tokenIds[i],
+                    uri: uris[i]
+                });
             }
 
             return this.metadataBulk(uriRequests);
@@ -204,31 +194,13 @@ export default class ERC721 extends BaseContract {
         const count = (await this.balanceOf(owner)).toNumber();
 
         if (this.contract.multicallProvider) {
-            const result: BigNumber[] = [];
+            const calls: IContractCall[] = [];
 
-            let indexes: number[] = [];
             for (let i = 0; i < count; i++) {
-                indexes.push(i);
+                calls.push(this.call('tokenOfOwnerByIndex', owner, i));
             }
 
-            const promises = [];
-
-            while (indexes.length !== 0) {
-                const calls: IContractCall[] = [];
-                const batch = indexes.slice(0, 10);
-                indexes = indexes.slice(10);
-
-                for (const idx of batch) {
-                    calls.push(this.call('tokenOfOwnerByIndex', owner, idx));
-                }
-
-                promises.push(this.contract.multicallProvider.aggregate(calls));
-            }
-
-            (await Promise.all(promises))
-                .map(outer => outer.map(inner => result.push(inner)));
-
-            return result;
+            return this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
         } else {
             const promises = [];
 

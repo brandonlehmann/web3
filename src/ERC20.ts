@@ -64,24 +64,19 @@ export default class ERC20 extends BaseContract {
         if (this.contract.multicallProvider) {
             const results: {owner: string, balance: BigNumber}[] = [];
 
-            while (accounts.length !== 0) {
-                const batch = accounts.slice(0, 50);
-                accounts = accounts.slice(50);
+            const calls: IContractCall[] = [];
 
-                const calls: IContractCall[] = [];
+            for (const account of accounts) {
+                calls.push(this.call('balanceOf', account));
+            }
 
-                for (const owner of batch) {
-                    calls.push(this.call('balanceOf', owner));
-                }
+            const balances = await this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
 
-                const result = await this.contract.multicallProvider.aggregate(calls);
-
-                for (let i = 0; i < batch.length; i++) {
-                    results.push({
-                        owner: batch[i],
-                        balance: result[i]
-                    });
-                }
+            for (let i = 0; i < accounts.length; i++) {
+                results.push({
+                    owner: accounts[i],
+                    balance: balances[i]
+                });
             }
 
             return results;

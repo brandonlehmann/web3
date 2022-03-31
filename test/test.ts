@@ -21,7 +21,7 @@ import { ERC20, ERC721, Web3Controller } from '../src';
         console.log(await nft.ownedMetadata('0xb2D555044CdE0a8A297F082f05ae6B1eFf663784'));
 
         console.log(
-            nft.contract.call('royaltyInfo', 1, Math.pow(10, 10))
+            await nft.contract.call('royaltyInfo', 1, Math.pow(10, 10))
                 .call('tokenURI', 1)
                 .exec());
 

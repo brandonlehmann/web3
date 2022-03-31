@@ -57,21 +57,25 @@ export default class MulticallProvider {
      *
      * @deprecated
      * @param calls
+     * @param batchSize
      */
     public async multicall<Type extends any[] = any[]> (
-        calls: IContractCall[]
+        calls: IContractCall[],
+        batchSize = 50
     ): Promise<Type> {
-        return this.aggregate(calls);
+        return this.aggregate(calls, batchSize);
     }
 
     /**
      * Execute the requests contract calls using the multicall contract facility
      * @param calls
+     * @param batchSize
      */
     public async aggregate<Type extends any[] = any[]> (
-        calls: IContractCall[]
+        calls: IContractCall[],
+        batchSize = 50
     ): Promise<Type> {
-        const callRequests = calls.map(elem => {
+        let callRequests = calls.map(elem => {
             const callData = ABI.encode(elem.name, elem.inputs, elem.params);
             return {
                 target: elem.contract.address,
@@ -79,21 +83,24 @@ export default class MulticallProvider {
             };
         });
 
-        const response = await this.contract.retryCall<{
-            blockNumber: ethers.BigNumber,
-            returnData: string[]
-        }>(this.contract.aggregate, callRequests);
-
-        const callCount = calls.length;
-
         const callResult = [] as unknown as Type;
 
-        for (let i = 0; i < callCount; i++) {
-            const outputs = calls[i].outputs;
-            const returnData = response.returnData[i];
-            const params = ABI.decode(outputs, returnData);
-            const result = outputs.length === 1 ? params[0] : params;
-            callResult.push(result);
+        while (callRequests.length !== 0) {
+            const batch = callRequests.slice(0, batchSize);
+            callRequests = callRequests.slice(batchSize);
+
+            const response = await this.contract.retryCall<{
+                blockNumber: ethers.BigNumber,
+                returnData: string[]
+            }>(this.contract.aggregate, batch);
+
+            for (let i = 0; i < batch.length; i++) {
+                const outputs = calls[i].outputs;
+                const returnData = response.returnData[i];
+                const params = ABI.decode(outputs, returnData);
+                const result = outputs.length === 1 ? params[0] : params;
+                callResult.push(result);
+            }
         }
 
         return callResult;
