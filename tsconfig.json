@@ -6,7 +6,7 @@
       "dom",
       "scripthost"
     ],
-    "types": ["jquery", "bootstrap"],
+    "types": [],
     "module": "commonjs",
     "declaration": true,
     "outDir": "./dist",

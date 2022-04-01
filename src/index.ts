@@ -38,6 +38,7 @@ import { ethers, BigNumber } from 'ethers';
 import Metronome from 'node-metronome';
 import numeral from 'numeral';
 import fetch, { Headers, Request, Response } from 'cross-fetch';
+import * as localStorage from 'local-storage';
 
 export {
     ABI,
@@ -70,7 +71,8 @@ export {
     Metronome,
     numeral,
     sleep,
-    IContractCall
+    IContractCall,
+    localStorage
 };
 
 export default Web3Controller;

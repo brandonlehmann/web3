@@ -20,6 +20,9 @@
 
 import $ from 'jquery';
 import 'gasparesganga-jquery-loading-overlay';
+import 'bootstrap';
+import 'datatables.net-responsive';
+import 'datatables.net-fixedheader';
 
 export { $ };
 
