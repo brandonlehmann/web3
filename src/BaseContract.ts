@@ -50,17 +50,6 @@ export default class BaseContract {
     }
 
     /**
-     * Automatically keeps trying the call unless we get a revert exception
-     *
-     * @param func
-     * @param params
-     * @protected
-     */
-    protected async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
-        return this._contract.retryCall(func, ...params);
-    }
-
-    /**
      * Returns an interface allowing for us with the multicall method of a provider
      * @param name
      * @param params
@@ -76,5 +65,25 @@ export default class BaseContract {
      */
     public connect (signerOrProvider: ethers.Signer | ethers.providers.Provider | MulticallProvider) {
         this._contract = new Contract(this._contract.address, this._contract.interface, signerOrProvider);
+    }
+
+    /**
+     * Automatically keeps trying the call unless we get a revert exception
+     *
+     * @param func
+     * @param params
+     * @protected
+     */
+    protected async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
+        return this._contract.retryCall(func, ...params);
+    }
+
+    /**
+     * Returns whether the specified interface is supported by the contract
+     *
+     * @param interfaceId
+     */
+    public supportsInterface (interfaceId: string): Promise<boolean> {
+        return this.retryCall<boolean>(this.contract.supportsInterface, interfaceId);
     }
 }

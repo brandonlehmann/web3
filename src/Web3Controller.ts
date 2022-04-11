@@ -18,130 +18,92 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import Web3Modal, { IProviderOptions } from 'web3modal';
 import { ethers, BigNumber } from 'ethers';
-import MulticallProvider from './MulticallProvider';
-import Contract, { IContractCall } from './Contract';
 import { EventEmitter } from 'events';
-import WalletConnectProvider from '@walletconnect/web3-provider';
-import { WalletLink } from 'walletlink/dist/WalletLink';
+import {
+    DefaultProviderOptions,
+    IChainlistChain,
+    IWeb3ControllerOptions,
+    IWatchAssetParams, IAssetParams, IChainParams
+} from './Types';
+import fetch from 'cross-fetch';
+import Web3Modal, { IProviderOptions } from 'web3modal';
+import MulticallProvider from './MulticallProvider';
 import Metronome from 'node-metronome';
+import Contract, { IContractCall } from './Contract';
 import * as ls from 'local-storage';
 import { sleep } from './Tools';
-import fetch from 'cross-fetch';
+import ERC20 from './ERC20';
+import { JSONRPCMethod } from 'walletlink/dist/provider/JSONRPC';
 
-export const NullAddress = '0x0000000000000000000000000000000000000000';
-
-interface IChainlistChain {
-    chain: string;
-    chainId: number;
-    infoURL: string;
-    ens: {
-        registry: string;
-    };
-    explorers: {
-        name: string;
-        url: string;
-        standard: string;
-    }[];
-    nativeCurrency: {
-        name: string;
-        symbol: string;
-        decimals: number;
-    };
-    networkId: number;
-    rpc: string[];
-    shortName: string;
-    slip44: number;
-}
-
-export interface IWeb3ControllerOptions {
-    providerOptions?: IProviderOptions,
-    chainId?: number,
-    cacheProvider?: boolean
-}
-
-export const DefaultProviderOptions: IProviderOptions = {
-    walletconnect: {
-        package: WalletConnectProvider,
-        options: {
-            rpc: {}
-        }
-    },
-    'custom-walletlink': {
-        package: WalletLink,
-        display: {
-            logo: 'https://play-lh.googleusercontent.com/' +
-                'wrgUujbq5kbn4Wd4tzyhQnxOXkjiGqq39N4zBvCHmxpIiKcZw_Pb065KTWWlnoejsg=s360-rw',
-            name: 'Coinbase Wallet',
-            description: 'Connect to Coinbase Wallet'
-        },
-        options: {
-            rpc: '',
-            appName: '',
-            chainId: 0
-        },
-        connector: async (_, options) => {
-            const { appName, rpc, chainId } = options;
-            const instance = new WalletLink({
-                appName
-            });
-            const provider = instance.makeWeb3Provider(rpc, chainId);
-            if (provider.isConnected()) {
-                provider.disconnect();
-            }
-            await provider.enable();
-            return provider;
-        }
-    }
-};
-
-export { ethers, BigNumber, IProviderOptions };
-
-let Web3ControllerSingleton: any;
+/** @ignore */
+let Web3ControllerSingleton: any | undefined;
 
 /** @ignore */
 type ChainlistMap = Map<number, IChainlistChain>;
 
+/** @ignore */
+let ChainListCache: ChainlistMap = new Map<number, IChainlistChain>();
+
 export default class Web3Controller extends EventEmitter {
-    private _connected = false;
-    private _instance?: MulticallProvider;
-    private _signer?: ethers.Signer;
-    public modal?: Web3Modal;
+    private readonly modal?: Web3Modal;
+    private _web3Provider?: ethers.providers.Web3Provider;
     private _checkTimer?: Metronome;
-
-    protected constructor (
-        public readonly appName: string,
-        private readonly providerOptions: IProviderOptions = DefaultProviderOptions,
-        public readonly cacheProvider = false,
-        private readonly _chains: ChainlistMap,
-        private readonly _defaultProvider?: MulticallProvider
-    ) {
-        super();
-
-        if (typeof window !== 'undefined') {
-            this.modal = new Web3Modal({
-                network: 'mainnet',
-                cacheProvider: this.cacheProvider,
-                providerOptions: this.providerOptions
-            });
-        }
-    }
+    private _instance?: any;
 
     public on(event: 'accountsChanged', listener: (accounts: string[]) => void): this;
 
     public on(event: 'chainChanged', listener: (chainId: number) => void): this;
 
-    public on(event: 'connected', listener: (info: {chainId: number}) => void): this;
+    public on(event: 'connect', listener: (info: {chainId: number}) => void): this;
 
     public on(event: 'disconnected', listener: (error: {code: number, message: string}) => void): this;
+
+    public on(event: 'error', listener: (error: Error) => void): this;
 
     public on (event: any, listener: (...args: any[]) => void): this {
         return super.on(event, listener);
     }
 
+    private constructor (
+        private readonly _appName: string,
+        private readonly _requestedChainId: number,
+        private readonly _providerOptions: IProviderOptions = DefaultProviderOptions,
+        private readonly _cacheProvider = true,
+        private readonly _chainList: ChainlistMap = ChainListCache,
+        private readonly _defaultProvider: ethers.providers.Provider
+    ) {
+        super();
+
+        for (const [, chain] of this._chainList) {
+            if (chain.chainId !== this._requestedChainId) {
+                continue;
+            }
+
+            if (chain.rpc.length !== 0) {
+                if (this._providerOptions.walletconnect) {
+                    this._providerOptions.walletconnect.options.rpc[chain.chainId] = chain.rpc[0];
+                }
+
+                if (this._providerOptions['custom-walletlink']) {
+                    this._providerOptions['custom-walletlink'].options.rpc = chain.rpc[0];
+                    this._providerOptions['custom-walletlink'].options.chainId = chain.chainId;
+                    this._providerOptions['custom-walletlink'].options.appName = this._appName;
+                }
+            }
+        }
+
+        if (typeof window !== 'undefined') {
+            this.modal = new Web3Modal({
+                network: 'mainnet',
+                cacheProvider: this._cacheProvider,
+                providerOptions: this._providerOptions
+            });
+        }
+    }
+
     /**
-     * Loads the singleton instance of the widget controller
+     * Loads a singleton of the controller object
      *
      * @param appName
      * @param options
@@ -154,316 +116,132 @@ export default class Web3Controller extends EventEmitter {
             return Web3ControllerSingleton;
         }
 
-        options = options || {};
-        options.providerOptions = options.providerOptions || DefaultProviderOptions;
-        options.cacheProvider = (typeof options.cacheProvider === 'undefined') ? false : options.cacheProvider;
+        options ||= {};
 
-        const chains = await Web3Controller.getChains();
-
-        if (options.chainId) {
-            const entry = chains.get(options.chainId);
-
-            if (entry) {
-                entry.rpc = entry.rpc.filter(elem => !elem.includes('$'));
-
-                if (entry.rpc.length !== 0) {
-                    const provider = new ethers.providers.JsonRpcProvider(entry.rpc[0]);
-                    const instance = new Web3Controller(
-                        appName,
-                        options.providerOptions,
-                        options.cacheProvider,
-                        chains,
-                        await MulticallProvider.create(provider)
-                    );
-                    Web3ControllerSingleton = instance;
-                    return instance;
-                }
-            }
+        if (!options.chainId) {
+            throw new Error('Must specify chain ID');
         }
 
-        const instance = new Web3Controller(appName, options.providerOptions, options.cacheProvider, chains);
+        options.providerOptions ||= DefaultProviderOptions;
+
+        let provider: ethers.providers.Provider;
+
+        if (options.jsonRpcProvider) {
+            provider = new ethers.providers.JsonRpcBatchProvider(options.jsonRpcProvider);
+        } else if (options.webSocketProvider) {
+            provider = new ethers.providers.WebSocketProvider(options.webSocketProvider);
+        } else {
+            const chains = await Web3Controller.getChains();
+
+            const chain = chains.get(options.chainId);
+
+            if (!chain) {
+                throw new Error('Could not find an acceptable provider, please specify one.');
+            }
+
+            provider = new ethers.providers.JsonRpcProvider(chain.rpc[0], options.chainId);
+        }
+
+        const instance = new Web3Controller(
+            appName,
+            options.chainId,
+            options.providerOptions,
+            true,
+            await this.getChains(),
+            provider
+        );
 
         Web3ControllerSingleton = instance;
 
         return instance;
     }
 
-    /**
-     * Returns if the widget is connected to web3
-     */
-    public get connected (): boolean {
-        return this._connected;
+    public get name (): string {
+        return this._appName;
     }
 
     /**
-     * Returns the connected signer
-     */
-    public get signer (): ethers.Signer | undefined {
-        if (this.connected && this._signer) {
-            return this._signer;
-        }
-    }
-
-    /**
-     * Returns the currently connected chain ID
-     */
-    public async chainId (): Promise<number> {
-        if (this.signer) {
-            return this.signer.getChainId();
-        } else if (this.provider) {
-            return (await this.provider.getNetwork()).chainId;
-        }
-        return 0;
-    }
-
-    /**
-     * Returns the connected Web3 provider
+     * Returns the currently connected provider interface
+     *
      */
     public get provider (): ethers.providers.Provider {
-        if (this.connected && this._instance) {
-            return this._instance.provider;
-        } else if (this._defaultProvider) {
-            return this._defaultProvider.provider;
-        }
-
-        throw new Error('No provider connected');
+        return this.web3Provider || this.defaultProvider;
     }
 
     /**
-     * Returns if there is a cached provider present
+     * Returns the default provider
+     *
+     * @private
+     */
+    private get defaultProvider (): ethers.providers.Provider {
+        return this._defaultProvider;
+    }
+
+    /**
+     * Returns a web3 provider interface if connected
+     *
+     * @private
+     */
+    private get web3Provider (): ethers.providers.Web3Provider | undefined {
+        return this._web3Provider;
+    }
+
+    /**
+     * Returns the signer if available
+     */
+    public get signer (): ethers.Signer | undefined {
+        return this.web3Provider?.getSigner();
+    }
+
+    /**
+     * Returns if the controller is connected to a signer
+     */
+    public get connected (): boolean {
+        return (typeof this.signer !== 'undefined');
+    }
+
+    /**
+     * Returns if a provider is cached for the modal
      */
     public get isCached (): boolean {
         if (!this.modal) {
             return false;
         }
 
-        return (this.cacheProvider &&
+        return (this._cacheProvider &&
             typeof this.modal.cachedProvider !== 'undefined' &&
             this.modal.cachedProvider.length !== 0);
     }
 
     /**
-     * Attempts to fetch the ABI information for the specified contract from an explorer
+     * Constructs a multicall provider on demand
      *
-     * @param contract_address
-     * @param chainId
-     * @param force_refresh
+     * @private
      */
-    public async fetchABI (
-        contract_address: string,
-        chainId?: number,
-        force_refresh = false
-    ): Promise<string> {
-        const connectedChainId = chainId || await this.chainId();
-
-        const cacheId = connectedChainId + '_' + contract_address;
-
-        if (!force_refresh) {
-            const abi = ls.get<string>(cacheId);
-
-            if (abi && abi.length !== 0) {
-                return abi;
-            }
-        }
-
-        let url = '';
-
-        const chain = this._chains.get(connectedChainId);
-
-        if (chain && chain.explorers.length !== 0) {
-            url = chain.explorers[0].url.replace('https://', 'https://api.');
-            url += '/api?module=contract&action=getabi&address=' + contract_address;
-        }
-
-        if (url.length === 0) {
-            throw new Error('Cannot find explorer for chain: ' + connectedChainId);
-        }
-
-        const response = await fetch(url);
-
-        if (!response.ok) {
-            throw new Error('Could not fetch ABI');
-        }
-
-        const json = await response.json();
-
-        if (json.result && json.status === '1') {
-            ls.set(cacheId, json.result);
-
-            return json.result;
-        }
-
-        await sleep(5);
-
-        return this.fetchABI(contract_address);
+    private async _constructMulticallProvider (): Promise<MulticallProvider> {
+        return MulticallProvider.create(this.provider);
     }
 
     /**
-     * Loads the specified contract using the connected signer
-     *
-     * @param contract_address
-     * @param contract_abi
-     * @param provider
-     * @param chainId
-     * @param force_refresh
+     * Returns the currently connected chain ID
      */
-    public async loadContract (
-        contract_address: string,
-        contract_abi?: ethers.ContractInterface,
-        provider?: ethers.Signer | ethers.providers.Provider | MulticallProvider,
-        chainId?: number,
-        force_refresh = false
-    ): Promise<Contract> {
-        if (!contract_abi) {
-            contract_abi = await this.fetchABI(contract_address, chainId, force_refresh);
-        }
-
-        let contractProvider = provider || this.signer || this.provider;
-
-        if (!(contractProvider instanceof MulticallProvider) &&
-            (contractProvider instanceof ethers.providers.Provider)) {
-            contractProvider = await MulticallProvider.create(contractProvider);
-        }
-
-        return new Contract(
-            contract_address,
-            contract_abi,
-            contractProvider);
-    }
-
-    /**
-     * Displays the web3 modal and connects to it
-     */
-    public async showWeb3Modal (): Promise<number> {
-        if (this.connected) {
-            await this.disconnect();
-        }
-
-        if (this.providerOptions['custom-walletlink']) {
-            this.providerOptions['custom-walletlink'].options.appName = this.appName;
-        }
-
-        for (const [, chain] of this._chains) {
-            if (chain.rpc.length !== 0) {
-                if (this.providerOptions.walletconnect) {
-                    this.providerOptions.walletconnect.options.rpc[chain.chainId] = chain.rpc[0];
-                }
-
-                if (this.providerOptions['custom-walletlink']) {
-                    this.providerOptions['custom-walletlink'].options.rpc = chain.rpc[0];
-                    this.providerOptions['custom-walletlink'].options.chainId = chain.chainId;
-                }
-            }
-        }
-
-        this.modal = new Web3Modal({
-            network: 'mainnet',
-            cacheProvider: this.cacheProvider,
-            providerOptions: this.providerOptions
-        });
-
-        if (!this.cacheProvider && this.modal.clearCachedProvider) {
-            await this.modal.clearCachedProvider();
-        }
-
-        const _instance = await this.modal.connect();
-
-        if (!_instance) {
-            throw new Error('Web3Provider is undefined');
-        }
-
-        _instance.on('accountsChanged', (accounts: string[]) => {
-            this.emit('accountsChanged', accounts);
-        });
-
-        _instance.on('chainChanged', (chainId: number) => {
-            this.emit('chainChanged', BigNumber.from(chainId).toNumber());
-        });
-
-        _instance.on('connect', (info: {chainId: number}) => {
-            this._connected = true;
-
-            this.emit('connect', { chainId: BigNumber.from(info.chainId).toNumber() });
-        });
-
-        _instance.on('disconnect', async (error: {code: number, message: string}) => {
-            await this.disconnect();
-
-            this.emit('disconnect', error);
-        });
-
-        const instance = new ethers.providers.Web3Provider(_instance as any);
-
-        this._instance = await MulticallProvider.create(instance);
-
-        this._signer = instance.getSigner();
-
-        this._checkTimer = new Metronome(500, true);
-
-        this._checkTimer.on('tick', async () => {
-            try {
-                if (!this.signer) {
-                    throw new Error('not connected');
-                }
-
-                const address = await this.signer.getAddress();
-
-                if (address.length === 0) {
-                    throw new Error('not connected');
-                }
-            } catch {
-                await this.disconnect();
-
-                this.emit('disconnect', { code: -1, message: 'Disconnected from provider' });
-            }
-        });
-
-        this._connected = true;
-
-        return this.chainId();
-    }
-
-    /**
-     * Disconnects the provider/signer/controller
-     * @param clearCachedProvider whether to force the clearing of the cached provider
-     */
-    public async disconnect (clearCachedProvider = false) {
-        if (this.modal) {
-            if ((!this.cacheProvider || clearCachedProvider) && this.modal.clearCachedProvider) {
-                this.modal.clearCachedProvider();
-            }
-        }
-
-        if (this._instance && (this._instance.provider as any).close) {
-            await (this._instance.provider as any).close();
-        }
-
-        if (this._instance && (this._instance.provider as any).disconnect) {
-            await (this._instance.provider as any).disconnect();
-        }
-
-        if (this._checkTimer) {
-            this._checkTimer.destroy();
-        }
-
-        this._instance = undefined;
-
-        this._connected = false;
-
-        this._signer = undefined;
-
-        this.emit('disconnect', { code: -1, message: 'Wallet disconnected' });
+    public async chainId (): Promise<number> {
+        return (await this.provider.getNetwork()).chainId;
     }
 
     /**
      * Retrieves a list of EVM chains from chainlist.org
      *
      * @param listUrl
-     * @protected
+     * @private
      */
-    protected static async getChains (
+    private static async getChains (
         listUrl = 'https://cloudflare-ipfs.com/ipfs/Qma4DkUFVDmLiYZHrmCVPh3fxrJM7TgskPymTJnQmcFhaW'
     ): Promise<ChainlistMap> {
+        if (ChainListCache.size !== 0) {
+            return ChainListCache;
+        }
+
         const response = await fetch(listUrl);
 
         if (!response.ok) {
@@ -479,21 +257,375 @@ export default class Web3Controller extends EventEmitter {
             result.set(chain.chainId, chain);
         }
 
+        ChainListCache = result;
+
         return result;
     }
 
     /**
-     * Execute the specified multicall
+     * Signs a message using the connected signer
+     *
+     * @param message
+     */
+    public async signMessage (message: ethers.Bytes | string): Promise<string> {
+        if (!this.signer) {
+            throw new Error('Signer is not connected');
+        }
+
+        return this.signer?.signMessage(message);
+    }
+
+    /**
+     * Displays a modal to allow a user to connect their wallet
+     *
+     * @param forceNetwork
+     */
+    public async showWeb3Modal (forceNetwork = false): Promise<void> {
+        if (this.connected) {
+            await this.disconnect();
+        }
+
+        try {
+            await this._connectWeb3Provider();
+        } catch (error: any) {
+            await this.disconnect();
+
+            throw error;
+        }
+
+        if (!this.web3Provider || !this.signer) {
+            throw new Error('Could not connect Web3 provider');
+        }
+
+        if (forceNetwork) {
+            try {
+                await this.switchChain(this._requestedChainId);
+            } catch (error: any) {
+                await this.disconnect();
+
+                throw error;
+            }
+        }
+
+        this._checkTimer = new Metronome(500, true);
+
+        this._checkTimer.on('tick', async () => {
+            if (!this._checkTimer) {
+                return;
+            }
+
+            try {
+                this._checkTimer.paused = true;
+
+                if (!this.signer || (await this.signer.getAddress()).length === 0) {
+                    return this.disconnect(-1, 'Signer not connected');
+                } else if (forceNetwork && (await this.signer.getChainId()) !== this._requestedChainId) {
+                    await this.switchChain(this._requestedChainId);
+                }
+            } catch {} finally {
+                this._checkTimer.paused = false;
+            }
+        });
+    }
+
+    /**
+     * Disconnects the connected instance
+     *
+     * @param code
+     * @param message
+     * @param clearCacheProvider
+     */
+    public async disconnect (
+        code = -1,
+        message = 'Disconnected from wallet provider',
+        clearCacheProvider = true
+    ): Promise<void> {
+        if (this.modal) {
+            if ((!this._cacheProvider || clearCacheProvider) && this.modal.clearCachedProvider) {
+                this.modal.clearCachedProvider();
+            }
+        }
+
+        if (this.defaultProvider instanceof ethers.providers.WebSocketProvider) {
+            await this.defaultProvider.destroy();
+        }
+
+        if (this.web3Provider && (this.web3Provider as any).close) {
+            await (this.web3Provider as any).close();
+        }
+
+        if (this.web3Provider && (this.web3Provider as any).disconnect) {
+            await (this.web3Provider as any).disconnect();
+        }
+
+        this._checkTimer?.destroy();
+
+        if (this.connected) {
+            this.emit('disconnect', { code, message });
+        }
+
+        this._web3Provider = undefined;
+    }
+
+    /**
+     * Execute the specified mutlicall commands
      *
      * @param calls
      */
     public async multicall<Type extends any[] = any[]> (calls: IContractCall[]): Promise<Type> {
-        if (this.connected && this._instance) {
-            return this._instance?.aggregate(calls);
-        } else if (this._defaultProvider) {
-            return this._defaultProvider.aggregate(calls);
+        const provider = await this._constructMulticallProvider();
+
+        return provider.aggregate(calls);
+    }
+
+    /**
+     * Uses the web3modal library to display the web3 modal to the user
+     *
+     * @param refresh
+     *
+     * @private
+     */
+    private async _connectWeb3Provider (refresh = false): Promise<void> {
+        if (!refresh) {
+            if (!this.modal) {
+                throw new Error('Must be called from a browser');
+            }
+
+            if (!this._cacheProvider && this.modal.clearCachedProvider) {
+                await this.modal.clearCachedProvider();
+            }
+
+            this._instance = await this.modal.connect();
+
+            this._instance.on('connect', async (info: { chainId: any }) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('connect', BigNumber.from(info.chainId).toNumber());
+            });
+
+            this._instance.on('disconnect', (error: { code: number, message: string }) => {
+                this.emit('disconnect', error);
+            });
+
+            this._instance.on('accountsChanged', async (accounts: string[]) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('accountsChanged', accounts);
+            });
+
+            this._instance.on('chainChanged', async (chainId: any) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('chainChanged', BigNumber.from(chainId).toNumber());
+            });
+
+            this._instance.on('error', (error: any) => {
+                this.emit('error', error);
+            });
         }
 
-        throw new Error('Provider not connected');
+        this._web3Provider = new ethers.providers.Web3Provider(this._instance);
+    }
+
+    /**
+     * Attempts to fetch the ABI information for the specified contract from an explorer
+     *
+     * @param contract_address
+     * @param chainId
+     * @param force_refresh
+     */
+    public async fetchABI (
+        contract_address: string,
+        chainId?: number,
+        force_refresh = false
+    ): Promise<string> {
+        chainId ||= await this.chainId();
+
+        const cacheId = chainId + '_' + contract_address;
+
+        if (!force_refresh) {
+            const abi = ls.get<string>(cacheId);
+
+            if (abi && abi.length !== 0) {
+                return abi;
+            }
+        }
+
+        const chain = this._chainList.get(chainId);
+
+        if (!chain || chain.explorers.length === 0) {
+            throw new Error('Cannot automatically load ABI for chain: ' + chainId);
+        }
+
+        const url = chain.explorers[0].url
+            .replace('https://', 'https://api.') +
+            '/api?module=contract&action=getabi&address=' +
+            contract_address;
+
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error('Could not fetch ABI from explorer: ' + url);
+        }
+
+        const json = await response.json();
+
+        if (json.result && json.status === '1') {
+            ls.set(cacheId, json.result);
+
+            return json.result;
+        }
+
+        await sleep(5);
+
+        return this.fetchABI(contract_address, chainId, force_refresh);
+    }
+
+    /**
+     * Loads the specified contract using the connected or specified signer || provider
+     *
+     * @param contract_address
+     * @param contract_abi
+     * @param provider
+     * @param chainId
+     * @param force_refresh
+     */
+    public async loadContract (
+        contract_address: string,
+        contract_abi?: ethers.ContractInterface,
+        provider: ethers.Signer | ethers.providers.Provider | MulticallProvider = this.signer || this.provider,
+        chainId?: number,
+        force_refresh = false
+    ): Promise<Contract> {
+        if (!contract_abi) {
+            contract_abi = await this.fetchABI(contract_address, chainId, force_refresh);
+        }
+
+        if (!(provider instanceof MulticallProvider)) {
+            if (provider instanceof ethers.providers.Provider) {
+                provider = await MulticallProvider.create(provider);
+            } else {
+                provider = await MulticallProvider.create(provider.provider || this.provider);
+            }
+        }
+
+        return new Contract(contract_address, contract_abi, provider);
+    }
+
+    /**
+     * Requests to add an asset for tracking to the connected wallet
+     *
+     * @param contract_address
+     * @param options
+     */
+    public async watchAsset (
+        contract_address: string,
+        options?: IAssetParams
+    ): Promise<void> {
+        if (!this.web3Provider) {
+            throw new Error('Web3 provider not connected');
+        }
+
+        options ||= {};
+
+        const token = new ERC20(await this.loadContract(contract_address));
+
+        options.symbol ||= await token.symbol();
+        options.decimals ||= await token.decimals();
+
+        const watch: IWatchAssetParams = {
+            type: 'ERC20',
+            options: {
+                address: contract_address,
+                symbol: options.symbol,
+                decimals: options.decimals,
+                image: options.logo || ''
+            }
+        };
+
+        await this.web3Provider.send(JSONRPCMethod.wallet_watchAsset, watch as any);
+    }
+
+    /**
+     * Requests to switch to the specified chain/network
+     *
+     * @param chainId
+     */
+    public async switchChain (chainId = this._requestedChainId): Promise<void> {
+        if (!this.web3Provider) {
+            throw new Error('Web3 provider not connected');
+        }
+
+        if (await this.chainId() === chainId) {
+            return;
+        }
+
+        let hex = BigNumber.from(chainId).toHexString();
+
+        while (hex.includes('0x0')) {
+            hex = hex.replace('0x0', '0x');
+        }
+
+        try {
+            await this.web3Provider.send(JSONRPCMethod.wallet_switchEthereumChain, [{
+                chainId: hex
+            }]);
+        } catch (error: any) {
+            if (error.code === 4902) {
+                await this.addChain(chainId);
+
+                return this.switchChain(chainId);
+            }
+
+            throw error;
+        }
+    }
+
+    /**
+     * Requests to add the specified chain/network to the web3 provider
+     *
+     * @param chainId
+     * @param options
+     */
+    public async addChain (
+        chainId = this._requestedChainId,
+        options?: IChainParams
+    ): Promise<void> {
+        if (!this.web3Provider) {
+            throw new Error('Web3 provider not connected');
+        }
+
+        if (await this.chainId() === chainId) {
+            return;
+        }
+
+        let hex = BigNumber.from(chainId).toHexString();
+
+        while (hex.includes('0x0')) {
+            hex = hex.replace('0x0', '0x');
+        }
+
+        options ||= {};
+
+        const chain = this._chainList.get(chainId);
+
+        if (chain) {
+            options.chainName ||= chain.name;
+            options.nativeCurrency ||= chain.nativeCurrency;
+            options.rpcUrls ||= chain.rpc.filter(elem => !elem.toLowerCase().includes('INFURA'));
+            options.blockExplorerUrls ||= (chain.explorers)
+                ? chain.explorers.map(elem => elem.url)
+                : undefined;
+            options.iconUrls ||= chain.icon || '';
+        }
+
+        await this.web3Provider.send(JSONRPCMethod.wallet_addEthereumChain, [{
+            chainId: hex,
+            chainName: options.chainName || 'Unknown',
+            nativeCurrency: options.nativeCurrency,
+            rpcUrls: options.rpcUrls,
+            blockExplorerUrls: options.blockExplorerUrls,
+            iconUrls: options.iconUrls
+        }]);
     }
 }

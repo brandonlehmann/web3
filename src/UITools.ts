@@ -82,18 +82,58 @@ export interface ILoadingOverlayOptions {
 export class Overlay {
     /**
      * Hides the displayed overlay
+     * @param options
+     * @param target
      */
-    public static hide () {
-        $(document.body).LoadingOverlay('hide');
+    public static hide (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        target = target || $(document.body);
+        target.LoadingOverlay('hide', options);
+    }
+
+    /**
+     * Updates the progress in the current overlay
+     * @param options
+     * @param target
+     */
+    public static progress (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        target = target || $(document.body);
+        target.LoadingOverlay('progress', options);
+    }
+
+    /**
+     * Resizes the overlay
+     * @param options
+     * @param target
+     */
+    public static resize (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        target = target || $(document.body);
+        target.LoadingOverlay('resize', options);
     }
 
     /**
      * Shows an overlay with the specified options
      * @param text
      * @param options
+     * @param target
      */
-    public static show (text: string, options?: ILoadingOverlayOptions) {
-        $(document.body).LoadingOverlay('show', options);
+    public static show (text: string, options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        options = options || {};
+        options.text = text || options?.text;
+        target = target || $(document.body);
+        target.LoadingOverlay('show', options);
+    }
+
+    /**
+     * Updates the text in the current overlay
+     * @param text
+     * @param options
+     * @param target
+     */
+    public static text (text: string, options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        options = options || {};
+        options.text = text || options?.text;
+        target = target || $(document.body);
+        target.LoadingOverlay('text', options);
     }
 }
 
@@ -143,4 +183,11 @@ export const showStatusModal = (
         $.noConflict();
         statusModalElement.modal('toggle');
     }
+};
+
+export default {
+    $,
+    createElement,
+    Overlay,
+    showStatusModal
 };

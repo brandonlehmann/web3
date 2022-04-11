@@ -84,23 +84,23 @@ export default class ERC721 extends BaseContract {
     /**
      * Returns the balances for each of the provided accounts
      *
-     * @param accounts
+     * @param owners
      */
-    public async balanceOfBatch (accounts: string[]): Promise<{owner: string, balance: BigNumber}[]> {
+    public async balanceOfBatch (owners: string[]): Promise<{owner: string, balance: BigNumber}[]> {
         if (this.contract.multicallProvider) {
             const results: {owner: string, balance: BigNumber}[] = [];
 
             const calls: IContractCall[] = [];
 
-            for (const account of accounts) {
-                calls.push(this.call('balanceOf', account));
+            for (const owner of owners) {
+                calls.push(this.call('balanceOf', owner));
             }
 
             const balances = await this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
 
-            for (let i = 0; i < accounts.length; i++) {
+            for (let i = 0; i < owners.length; i++) {
                 results.push({
-                    owner: accounts[i],
+                    owner: owners[i],
                     balance: balances[i]
                 });
             }
@@ -116,7 +116,7 @@ export default class ERC721 extends BaseContract {
                 };
             };
 
-            for (const owner of accounts) {
+            for (const owner of owners) {
                 promises.push(get(owner));
             }
 
@@ -365,17 +365,26 @@ export default class ERC721 extends BaseContract {
         name: string,
         totalSupply: BigNumber
     }> {
-        const result = await this.contract.call('symbol')
-            .call('name')
-            .call('totalSupply')
-            .exec();
+        if (this.contract.multicallProvider) {
+            const result = await this.contract.call('symbol')
+                .call('name')
+                .call('totalSupply')
+                .exec();
 
-        return {
-            address: this.contract.address,
-            symbol: result[0],
-            name: result[1],
-            totalSupply: result[2]
-        };
+            return {
+                address: this.contract.address,
+                symbol: result[0],
+                name: result[1],
+                totalSupply: result[2]
+            };
+        } else {
+            return {
+                address: this.contract.address,
+                symbol: await this.symbol(),
+                name: await this.name(),
+                totalSupply: await this.totalSupply()
+            };
+        }
     }
 
     /**

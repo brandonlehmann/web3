@@ -1,7 +1,7 @@
 {
   "out": "./docs",
   "excludeExternals": true,
-  "excludePrivate": false,
+  "excludePrivate": true,
   "entryPoints": [
     "./src/index.ts"
   ],

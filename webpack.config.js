@@ -6,11 +6,15 @@ const path = require('path');
 module.exports = {
     mode: 'production',
     entry: {
-        Web3: './dist/index.js'
+        Web3: './dist/index.js',
+        Web3UITools: './dist/UITools.js'
     },
     output: {
         path: path.resolve(__dirname, 'dist'),
-        filename: '[name].bundle.js'
+        filename: '[name].bundle.js',
+        library: '[name]',
+        libraryTarget: 'umd',
+        libraryExport: 'default'
     },
     optimization: {
         usedExports: true,

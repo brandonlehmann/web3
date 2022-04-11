@@ -21,11 +21,9 @@
 import { BigNumber, ethers } from 'ethers';
 import { IContractCall } from './Contract';
 import BaseContract from './BaseContract';
+import { MaxApproval } from './ERC20';
 
-export const MaxApproval = BigNumber.from(
-    '115792089237316195423570985008687907853269984665640564039453994996602238659104');
-
-export default class ERC20 extends BaseContract {
+export default class ERC777 extends BaseContract {
     /**
      * Returns the amount which spender is still allowed to withdraw from owner.
      * @param owner
@@ -45,6 +43,15 @@ export default class ERC20 extends BaseContract {
         value: ethers.BigNumberish = MaxApproval
     ): Promise<ethers.ContractTransaction> {
         return this.contract.approve(spender, value);
+    }
+
+    /**
+     * Set a third party operator address as an operator of msg.sender to send and burn tokens on its behalf.
+     *
+     * @param operator
+     */
+    public async authorizeOperator (operator: string): Promise<ethers.ContractTransaction> {
+        return this.contract.authorizeOperator(operator);
     }
 
     /**
@@ -99,11 +106,121 @@ export default class ERC20 extends BaseContract {
     }
 
     /**
+     * Burn the amount of tokens from the address msg.sender.
+     *
+     * @param amount
+     * @param data
+     */
+    public async burn (amount: ethers.BigNumberish, data: string): Promise<ethers.ContractTransaction> {
+        return this.contract.burn(amount, data);
+    }
+
+    /**
      * Returns the number of decimals the token uses - e.g. 8, means to divide the
      * token amount by 100000000 to get its user representation.
      */
     public async decimals (): Promise<number> {
         return this.retryCall<number>(this.contract.decimals);
+    }
+
+    /**
+     * Get the list of default operators as defined by the token contract.
+     */
+    public async defaultOperators (): Promise<string[]> {
+        return this.retryCall<string[]>(this.contract.defaultOperators);
+    }
+
+    /**
+     * Get the smallest part of the token that’s not divisible.
+     *
+     * In other words, the granularity is the smallest amount of tokens (in the internal denomination)
+     * which MAY be minted, sent or burned at any time.
+     */
+    public async granularity (): Promise<BigNumber> {
+        return this.retryCall<BigNumber>(this.contract.granularity);
+    }
+
+    /**
+     * Indicate whether the operator address is an operator of the holder address.
+     *
+     * @param operator
+     * @param holder
+     */
+    public async isOperatorFor (operator: string, holder: string): Promise<boolean> {
+        return this.retryCall<boolean>(this.contract.isOperatorFor, operator, holder);
+    }
+
+    /**
+     * Returns the name of the token - e.g. "MyToken".
+     */
+    public async name (): Promise<string> {
+        return this.retryCall<string>(this.contract.name);
+    }
+
+    /**
+     * Burn the amount of tokens on behalf of the address from.
+     *
+     * @param from
+     * @param amount
+     * @param data
+     * @param operatorData
+     */
+    public async operatorBurn (
+        from: string,
+        amount: ethers.BigNumberish,
+        data: string,
+        operatorData: string): Promise<ethers.ContractTransaction> {
+        return this.contract.operatorBurn(from, amount, data, operatorData);
+    }
+
+    /**
+     * Send the amount of tokens on behalf of the address from to the address to.
+     *
+     * Reminder: If the operator address is not an authorized operator of the from address,
+     * then the send process MUST revert.
+     *
+     * @param from
+     * @param to
+     * @param amount
+     * @param data
+     * @param operatorData
+     */
+    public async operatorSend (
+        from: string,
+        to: string,
+        amount: ethers.BigNumberish,
+        data: string,
+        operatorData: string
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.operatorSend(from, to, amount, data, operatorData);
+    }
+
+    /**
+     * Remove the right of the operator address to be an operator for msg.sender
+     * and to send and burn tokens on its behalf.
+     *
+     * @param operator
+     */
+    public async revokeOperator (operator: string): Promise<ethers.ContractTransaction> {
+        return this.contract.revokeOperator(operator);
+    }
+
+    /**
+     * Send the amount of tokens from the address msg.sender to the address to.
+     *
+     * @param to
+     * @param amount
+     * @param data
+     */
+    public async send (to: string, amount: ethers.BigNumberish, data: string): Promise<ethers.ContractTransaction> {
+        return this.contract.send(to, amount, data);
+    }
+
+    /**
+     * Returns the symbol of the token. E.g. “HIX”.
+     */
+    public async symbol (): Promise<string> {
+        return this.retryCall<string>(this.contract.symbol);
     }
 
     /**
@@ -139,20 +256,6 @@ export default class ERC20 extends BaseContract {
                 totalSupply: await this.totalSupply()
             };
         }
-    }
-
-    /**
-     * Returns the name of the token - e.g. "MyToken".
-     */
-    public async name (): Promise<string> {
-        return this.retryCall<string>(this.contract.name);
-    }
-
-    /**
-     * Returns the symbol of the token. E.g. “HIX”.
-     */
-    public async symbol (): Promise<string> {
-        return this.retryCall<string>(this.contract.symbol);
     }
 
     /**

@@ -23,22 +23,27 @@ import BaseContract, { IContract } from './BaseContract';
 import Contract, { IContractCall } from './Contract';
 import ERC20, { MaxApproval } from './ERC20';
 import ERC721, { IERC721Metadata, IERC721Attribute } from './ERC721';
+import ERC777 from './ERC777';
 import ERC1155, { IERC1155Metadata, IERC1155Properties } from './ERC1155';
 import MultiCall from './Multicall';
+import Verifier from './Verifier';
 import { multicallAddresses, multicallAbi } from './MulticallAddresses';
 import MulticallProvider from './MulticallProvider';
 import { sleep } from './Tools';
-import Web3Controller, {
+import Web3Controller from './Web3Controller';
+import { IProviderOptions } from 'web3modal';
+import {
     DefaultProviderOptions,
-    IProviderOptions,
     NullAddress,
+    Null1Address,
     IWeb3ControllerOptions
-} from './Web3Controller';
+} from './Types';
 import { ethers, BigNumber } from 'ethers';
 import Metronome from 'node-metronome';
 import numeral from 'numeral';
 import fetch, { Headers, Request, Response } from 'cross-fetch';
 import * as localStorage from 'local-storage';
+import * as dotenv from 'dotenv';
 
 export {
     ABI,
@@ -48,9 +53,11 @@ export {
     Response,
     ERC20,
     ERC721,
+    ERC777,
     BaseContract,
     MaxApproval,
     NullAddress,
+    Null1Address,
     Contract,
     MultiCall,
     MulticallProvider,
@@ -72,7 +79,9 @@ export {
     numeral,
     sleep,
     IContractCall,
-    localStorage
+    localStorage,
+    Verifier,
+    dotenv
 };
 
 export default Web3Controller;
