@@ -21,10 +21,20 @@
 import { connectors, IProviderOptions } from 'web3modal';
 import WalletConnectProvider from '@walletconnect/web3-provider';
 import { WalletLink } from 'walletlink/dist/WalletLink';
+import { ethers } from 'ethers';
+import MulticallProvider from './MulticallProvider';
 
+/**
+ * Representation of the NULL address
+ */
 export const NullAddress = '0x0000000000000000000000000000000000000000';
+
+/**
+ * Representation of the NULL+1 address
+ */
 export const Null1Address = '0x0000000000000000000000000000000000000001';
 
+/** @ignore */
 export interface IWatchAssetParams {
     type: 'ERC20'; // In the future, other standards will be supported
     options: {
@@ -35,6 +45,10 @@ export interface IWatchAssetParams {
     };
 }
 
+/**
+ * Represents asset parameters that are used when attempting to add
+ * the token to the watch of a web3 provider
+ */
 export interface IAssetParams {
     symbol?: string;
     decimals?: number;
@@ -42,6 +56,10 @@ export interface IAssetParams {
     logo?: string;
 }
 
+/**
+ * Represents chain parameters that are used when attempting to add
+ * a chain to a web3 provider
+ */
 export interface IChainParams {
     chainName?: string;
     nativeCurrency?: {
@@ -54,6 +72,10 @@ export interface IChainParams {
     iconUrls?: string;
 }
 
+/**
+ * Represents a chainlist object that has information about
+ * each of the chains that were tracked on chainlist.org
+ */
 export interface IChainlistChain {
     name: string;
     chain: string;
@@ -79,6 +101,9 @@ export interface IChainlistChain {
     slip44: number;
 }
 
+/**
+ * Represents Web3 controller options
+ */
 export interface IWeb3ControllerOptions {
     providerOptions?: IProviderOptions;
     chainId?: number;
@@ -86,6 +111,9 @@ export interface IWeb3ControllerOptions {
     webSocketProvider?: string;
 }
 
+/**
+ * Represents default Web3 modal options
+ */
 export const DefaultProviderOptions: IProviderOptions = {
     walletconnect: {
         package: WalletConnectProvider,
@@ -132,3 +160,18 @@ export const DefaultProviderOptions: IProviderOptions = {
         connector: connectors.injected
     }
 };
+
+/**
+ * Represents contract fetch abi optins
+ */
+export interface IContractFetchAbiOptions {
+    chainId?: number;
+    force_refresh?: boolean;
+}
+
+/**
+ * Represents contract load options
+ */
+export interface IContractLoadOptions extends IContractFetchAbiOptions {
+    provider?: ethers.Signer | ethers.providers.Provider | MulticallProvider;
+}

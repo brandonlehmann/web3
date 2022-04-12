@@ -21,17 +21,28 @@
 import { ethers } from 'ethers';
 import Contract, { IContractCall } from './Contract';
 import ABI from './ABI';
-import { multicallAddresses, multicallAbi } from './MulticallAddresses';
+import { multicallAbi, multicallAddresses } from './MulticallAddresses';
 
 export interface IMulticallProviderOptions {
     chainId?: number,
     multicallAddress?: string
 }
 
+/**
+ * Represents a multicall capable provider interface
+ */
 export default class MulticallProvider {
     private readonly multicallAddress: string;
     private readonly contract: Contract;
 
+    /**
+     * Protected constructor of the object
+     *
+     * @param provider
+     * @param chainId
+     * @param multicallAddress
+     * @protected
+     */
     protected constructor (
         public readonly provider: ethers.providers.Provider,
         public readonly chainId: number,
@@ -53,6 +64,35 @@ export default class MulticallProvider {
     }
 
     /**
+     * Creates a new instance of a multicall provider using an existing provider
+     *
+     * @param provider
+     * @param options
+     */
+    public static async create (
+        provider: ethers.providers.Provider,
+        options?: IMulticallProviderOptions
+    ): Promise<MulticallProvider> {
+        options = options || {};
+
+        if (!options.chainId) {
+            options.chainId = (await provider.getNetwork()).chainId;
+        }
+
+        return new MulticallProvider(provider, options.chainId, options.multicallAddress);
+    }
+
+    /**
+     * Registers the multicall address for the specified chain ID
+     *
+     * @param chainId
+     * @param multicallAddress
+     */
+    public static registerMulticallAddress (chainId: number, multicallAddress: string) {
+        multicallAddresses.set(chainId, multicallAddress);
+    }
+
+    /**
      * Execute the requests contract calls using the multicall contract facility
      *
      * @deprecated
@@ -68,6 +108,7 @@ export default class MulticallProvider {
 
     /**
      * Execute the requests contract calls using the multicall contract facility
+     *
      * @param calls
      * @param batchSize
      */
@@ -157,33 +198,5 @@ export default class MulticallProvider {
      */
     public async getLastBlockHash (): Promise<string> {
         return this.contract.retryCall(this.contract.getLastBlockHash);
-    }
-
-    /**
-     * Creates a new instance of a multicall provider using an existing provider
-     * @param provider
-     * @param options
-     */
-    public static async create (
-        provider: ethers.providers.Provider,
-        options?: IMulticallProviderOptions
-    ): Promise<MulticallProvider> {
-        options = options || {};
-
-        if (!options.chainId) {
-            options.chainId = (await provider.getNetwork()).chainId;
-        }
-
-        return new MulticallProvider(provider, options.chainId, options.multicallAddress);
-    }
-
-    /**
-     * Registers the multicall address for the specified chain ID
-     *
-     * @param chainId
-     * @param multicallAddress
-     */
-    public static registerMulticallAddress (chainId: number, multicallAddress: string) {
-        multicallAddresses.set(chainId, multicallAddress);
     }
 }

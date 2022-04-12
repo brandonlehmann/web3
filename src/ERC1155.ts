@@ -18,14 +18,20 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { ethers, BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import fetch from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
 
+/**
+ * Represents an ERC1155 attribute in the metadata
+ */
 export interface IERC1155Properties {
     [key: string]: string | number | object;
 }
 
+/**
+ * Represents the metadata of an ERC1155 token
+ */
 export interface IERC1155Metadata {
     tokenId: BigNumber
     contract: string;
@@ -36,6 +42,11 @@ export interface IERC1155Metadata {
     properties?: IERC1155Properties;
 }
 
+/**
+ * Basic representation of an ERC1155 compatible contract.
+ * If additional functionality is required, this contract can be
+ * extended via inheritance
+ */
 export default class ERC1155 extends BaseContract {
     constructor (
         _contract: IContract,
@@ -46,6 +57,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Get the balance of an account's tokens.
+     *
      * @param owner
      * @param id
      */
@@ -55,6 +67,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Get the balance of multiple account/token pairs
+     *
      * @param owners
      * @param ids
      */
@@ -64,6 +77,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Indicates whether any token exist with a given id, or not.
+     *
      * @param id
      */
     public async exists (id: ethers.BigNumberish): Promise<boolean> {
@@ -72,6 +86,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Queries the approval status of an operator for a given owner.
+     *
      * @param owner
      * @param operator
      */
@@ -81,6 +96,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Fetches the metadata for the specified token ID
+     *
      * @param id
      */
     public async metadata (id: ethers.BigNumberish): Promise<IERC1155Metadata> {
@@ -106,6 +122,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Transfers `values` amount(s) of `ids` from the `from` address to the `to` address specified (with safety call).
+     *
      * @param from
      * @param to
      * @param ids
@@ -124,6 +141,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Transfers `value` amount of an `id` from the `from` address to the `to` address specified (with safety call).
+     *
      * @param from
      * @param to
      * @param id
@@ -142,6 +160,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * Enable or disable approval for a third party ("operator") to manage all of the caller's tokens.
+     *
      * @param operator
      * @param approved
      */
@@ -158,6 +177,7 @@ export default class ERC1155 extends BaseContract {
 
     /**
      * A distinct Uniform Resource Identifier (URI) for a given token.
+     *
      * @param id
      */
     public async uri (id: ethers.BigNumberish): Promise<any> {

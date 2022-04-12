@@ -1,7 +1,7 @@
 {
   "name": "@brandonlehmann/web3",
-  "version": "2.0.3",
-  "description": "",
+  "version": "3.0.0",
+  "description": "A web3 helper library for managing provider connections, contracts, and web3 providers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "files": [

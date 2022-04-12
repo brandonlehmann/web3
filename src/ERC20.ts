@@ -22,12 +22,21 @@ import { BigNumber, ethers } from 'ethers';
 import { IContractCall } from './Contract';
 import BaseContract from './BaseContract';
 
+/**
+ * type(uint256).max representation for maximum token approvals
+ */
 export const MaxApproval = BigNumber.from(
     '115792089237316195423570985008687907853269984665640564039453994996602238659104');
 
+/**
+ * Basic representation of an ERC20 compatible contract.
+ * If additional functionality is required, this contract can be
+ * extended via inheritance
+ */
 export default class ERC20 extends BaseContract {
     /**
      * Returns the amount which spender is still allowed to withdraw from owner.
+     *
      * @param owner
      * @param spender
      */
@@ -37,6 +46,7 @@ export default class ERC20 extends BaseContract {
 
     /**
      * Allows spender to withdraw from your account multiple times, up to the value amount
+     *
      * @param spender
      * @param value
      */
@@ -49,6 +59,7 @@ export default class ERC20 extends BaseContract {
 
     /**
      * Returns the account balance of another account with address owner.
+     *
      * @param owner
      */
     public async balanceOf (owner: string): Promise<BigNumber> {
@@ -60,9 +71,9 @@ export default class ERC20 extends BaseContract {
      *
      * @param owners
      */
-    public async balanceOfBatch (owners: string[]): Promise<{owner: string, balance: BigNumber}[]> {
+    public async balanceOfBatch (owners: string[]): Promise<{ owner: string, balance: BigNumber }[]> {
         if (this.contract.multicallProvider) {
-            const results: {owner: string, balance: BigNumber}[] = [];
+            const results: { owner: string, balance: BigNumber }[] = [];
 
             const calls: IContractCall[] = [];
 
@@ -83,7 +94,7 @@ export default class ERC20 extends BaseContract {
         } else {
             const promises = [];
 
-            const get = async (owner: string): Promise<{owner: string, balance: BigNumber}> => {
+            const get = async (owner: string): Promise<{ owner: string, balance: BigNumber }> => {
                 return {
                     owner: owner,
                     balance: await this.balanceOf(owner)
@@ -164,6 +175,7 @@ export default class ERC20 extends BaseContract {
 
     /**
      * Transfers value amount of tokens to address to
+     *
      * @param to
      * @param value
      */
@@ -173,6 +185,7 @@ export default class ERC20 extends BaseContract {
 
     /**
      * Transfers value amount of tokens from address from to address to
+     *
      * @param from
      * @param to
      * @param value

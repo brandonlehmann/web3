@@ -18,9 +18,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { ethers, BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import BaseContract from './BaseContract';
 
+/**
+ * Basic representation of a standard Multicall compatible contract.
+ * If additional functionality is required, this contract can be
+ * extended via inheritance
+ */
 export default class MultiCall extends BaseContract {
     /**
      * Executes the aggregated calls and returns the results
@@ -29,7 +34,7 @@ export default class MultiCall extends BaseContract {
      */
     public async aggregate (
         calls: string[] | ethers.BytesLike[]
-    ): Promise<{blockNumber: BigNumber, returnData: string[]}> {
+    ): Promise<{ blockNumber: BigNumber, returnData: string[] }> {
         const [blockNumber, returnData] = await this.retryCall(this.contract.aggregate, calls);
 
         return {
@@ -49,6 +54,7 @@ export default class MultiCall extends BaseContract {
 
     /**
      * Retrieves the hash of the specified block height
+     *
      * @param blockNumber
      */
     public async getBlockHash (blockNumber: ethers.BigNumberish): Promise<string> {

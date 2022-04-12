@@ -18,13 +18,17 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { ethers, BigNumber } from 'ethers';
+import { BigNumber, ethers } from 'ethers';
 import { EventEmitter } from 'events';
 import {
     DefaultProviderOptions,
+    IAssetParams,
     IChainlistChain,
-    IWeb3ControllerOptions,
-    IWatchAssetParams, IAssetParams, IChainParams
+    IChainParams,
+    IContractFetchAbiOptions,
+    IContractLoadOptions,
+    IWatchAssetParams,
+    IWeb3ControllerOptions
 } from './Types';
 import fetch from 'cross-fetch';
 import Web3Modal, { IProviderOptions } from 'web3modal';
@@ -47,23 +51,8 @@ let ChainListCache: ChainlistMap = new Map<number, IChainlistChain>();
 
 export default class Web3Controller extends EventEmitter {
     private readonly modal?: Web3Modal;
-    private _web3Provider?: ethers.providers.Web3Provider;
     private _checkTimer?: Metronome;
     private _instance?: any;
-
-    public on(event: 'accountsChanged', listener: (accounts: string[]) => void): this;
-
-    public on(event: 'chainChanged', listener: (chainId: number) => void): this;
-
-    public on(event: 'connect', listener: (info: {chainId: number}) => void): this;
-
-    public on(event: 'disconnected', listener: (error: {code: number, message: string}) => void): this;
-
-    public on(event: 'error', listener: (error: Error) => void): this;
-
-    public on (event: any, listener: (...args: any[]) => void): this {
-        return super.on(event, listener);
-    }
 
     private constructor (
         private readonly _appName: string,
@@ -100,6 +89,68 @@ export default class Web3Controller extends EventEmitter {
                 providerOptions: this._providerOptions
             });
         }
+    }
+
+    /**
+     * Returns the current application name
+     */
+    public get name (): string {
+        return this._appName;
+    }
+
+    /**
+     * Returns the currently connected provider interface
+     *
+     */
+    public get provider (): ethers.providers.Provider {
+        return this.web3Provider || this.defaultProvider;
+    }
+
+    /**
+     * Returns the signer if available
+     */
+    public get signer (): ethers.Signer | undefined {
+        return this.web3Provider?.getSigner();
+    }
+
+    /**
+     * Returns if the controller is connected to a signer
+     */
+    public get connected (): boolean {
+        return (typeof this.signer !== 'undefined');
+    }
+
+    /**
+     * Returns if a provider is cached for the modal
+     */
+    public get isCached (): boolean {
+        if (!this.modal) {
+            return false;
+        }
+
+        return (this._cacheProvider &&
+            typeof this.modal.cachedProvider !== 'undefined' &&
+            this.modal.cachedProvider.length !== 0);
+    }
+
+    private _web3Provider?: ethers.providers.Web3Provider;
+
+    /**
+     * Returns a web3 provider interface if connected
+     *
+     * @private
+     */
+    private get web3Provider (): ethers.providers.Web3Provider | undefined {
+        return this._web3Provider;
+    }
+
+    /**
+     * Returns the default provider
+     *
+     * @private
+     */
+    private get defaultProvider (): ethers.providers.Provider {
+        return this._defaultProvider;
     }
 
     /**
@@ -156,79 +207,6 @@ export default class Web3Controller extends EventEmitter {
         return instance;
     }
 
-    public get name (): string {
-        return this._appName;
-    }
-
-    /**
-     * Returns the currently connected provider interface
-     *
-     */
-    public get provider (): ethers.providers.Provider {
-        return this.web3Provider || this.defaultProvider;
-    }
-
-    /**
-     * Returns the default provider
-     *
-     * @private
-     */
-    private get defaultProvider (): ethers.providers.Provider {
-        return this._defaultProvider;
-    }
-
-    /**
-     * Returns a web3 provider interface if connected
-     *
-     * @private
-     */
-    private get web3Provider (): ethers.providers.Web3Provider | undefined {
-        return this._web3Provider;
-    }
-
-    /**
-     * Returns the signer if available
-     */
-    public get signer (): ethers.Signer | undefined {
-        return this.web3Provider?.getSigner();
-    }
-
-    /**
-     * Returns if the controller is connected to a signer
-     */
-    public get connected (): boolean {
-        return (typeof this.signer !== 'undefined');
-    }
-
-    /**
-     * Returns if a provider is cached for the modal
-     */
-    public get isCached (): boolean {
-        if (!this.modal) {
-            return false;
-        }
-
-        return (this._cacheProvider &&
-            typeof this.modal.cachedProvider !== 'undefined' &&
-            this.modal.cachedProvider.length !== 0);
-    }
-
-    /**
-     * Constructs a multicall provider on demand
-     *
-     * @private
-     */
-    private async _constructMulticallProvider (): Promise<MulticallProvider> {
-        return MulticallProvider.create(this.provider);
-    }
-
-    /**
-     * Returns the currently connected chain ID
-     */
-    public async chainId (): Promise<number> {
-        return (await this.provider.getNetwork()).chainId;
-    }
-
     /**
      * Retrieves a list of EVM chains from chainlist.org
      *
@@ -260,6 +238,27 @@ export default class Web3Controller extends EventEmitter {
         ChainListCache = result;
 
         return result;
+    }
+
+    public on(event: 'accountsChanged', listener: (accounts: string[]) => void): this;
+
+    public on(event: 'chainChanged', listener: (chainId: number) => void): this;
+
+    public on(event: 'connect', listener: (chainId: number) => void): this;
+
+    public on(event: 'disconnect', listener: (error: { code: number, message: string }) => void): this;
+
+    public on(event: 'error', listener: (error: Error) => void): this;
+
+    public on (event: any, listener: (...args: any[]) => void): this {
+        return super.on(event, listener);
+    }
+
+    /**
+     * Returns the currently connected chain ID
+     */
+    public async chainId (): Promise<number> {
+        return (await this.provider.getNetwork()).chainId;
     }
 
     /**
@@ -322,7 +321,8 @@ export default class Web3Controller extends EventEmitter {
                 } else if (forceNetwork && (await this.signer.getChainId()) !== this._requestedChainId) {
                     await this.switchChain(this._requestedChainId);
                 }
-            } catch {} finally {
+            } catch {
+            } finally {
                 this._checkTimer.paused = false;
             }
         });
@@ -379,71 +379,22 @@ export default class Web3Controller extends EventEmitter {
     }
 
     /**
-     * Uses the web3modal library to display the web3 modal to the user
-     *
-     * @param refresh
-     *
-     * @private
-     */
-    private async _connectWeb3Provider (refresh = false): Promise<void> {
-        if (!refresh) {
-            if (!this.modal) {
-                throw new Error('Must be called from a browser');
-            }
-
-            if (!this._cacheProvider && this.modal.clearCachedProvider) {
-                await this.modal.clearCachedProvider();
-            }
-
-            this._instance = await this.modal.connect();
-
-            this._instance.on('connect', async (info: { chainId: any }) => {
-                await this._connectWeb3Provider(true);
-
-                this.emit('connect', BigNumber.from(info.chainId).toNumber());
-            });
-
-            this._instance.on('disconnect', (error: { code: number, message: string }) => {
-                this.emit('disconnect', error);
-            });
-
-            this._instance.on('accountsChanged', async (accounts: string[]) => {
-                await this._connectWeb3Provider(true);
-
-                this.emit('accountsChanged', accounts);
-            });
-
-            this._instance.on('chainChanged', async (chainId: any) => {
-                await this._connectWeb3Provider(true);
-
-                this.emit('chainChanged', BigNumber.from(chainId).toNumber());
-            });
-
-            this._instance.on('error', (error: any) => {
-                this.emit('error', error);
-            });
-        }
-
-        this._web3Provider = new ethers.providers.Web3Provider(this._instance);
-    }
-
-    /**
      * Attempts to fetch the ABI information for the specified contract from an explorer
      *
      * @param contract_address
-     * @param chainId
-     * @param force_refresh
+     * @param options
      */
     public async fetchABI (
         contract_address: string,
-        chainId?: number,
-        force_refresh = false
+        options?: IContractFetchAbiOptions
     ): Promise<string> {
-        chainId ||= await this.chainId();
+        options ||= {};
+        options.chainId ||= await this.chainId();
+        options.force_refresh ||= false;
 
-        const cacheId = chainId + '_' + contract_address;
+        const cacheId = options.chainId + '_' + contract_address;
 
-        if (!force_refresh) {
+        if (!options.force_refresh) {
             const abi = ls.get<string>(cacheId);
 
             if (abi && abi.length !== 0) {
@@ -451,10 +402,10 @@ export default class Web3Controller extends EventEmitter {
             }
         }
 
-        const chain = this._chainList.get(chainId);
+        const chain = this._chainList.get(options.chainId);
 
         if (!chain || chain.explorers.length === 0) {
-            throw new Error('Cannot automatically load ABI for chain: ' + chainId);
+            throw new Error('Cannot automatically fetch ABI for chain: ' + options.chainId);
         }
 
         const url = chain.explorers[0].url
@@ -478,7 +429,7 @@ export default class Web3Controller extends EventEmitter {
 
         await sleep(5);
 
-        return this.fetchABI(contract_address, chainId, force_refresh);
+        return this.fetchABI(contract_address, options);
     }
 
     /**
@@ -486,30 +437,35 @@ export default class Web3Controller extends EventEmitter {
      *
      * @param contract_address
      * @param contract_abi
-     * @param provider
-     * @param chainId
-     * @param force_refresh
+     * @param options
      */
     public async loadContract (
         contract_address: string,
         contract_abi?: ethers.ContractInterface,
-        provider: ethers.Signer | ethers.providers.Provider | MulticallProvider = this.signer || this.provider,
-        chainId?: number,
-        force_refresh = false
+        options?: IContractLoadOptions
     ): Promise<Contract> {
+        options ||= {};
+        options.chainId ||= await this.chainId();
+        options.force_refresh ||= false;
+        options.provider ||= this.signer || this.provider;
+
         if (!contract_abi) {
-            contract_abi = await this.fetchABI(contract_address, chainId, force_refresh);
+            contract_abi = await this.fetchABI(contract_address, options);
         }
 
-        if (!(provider instanceof MulticallProvider)) {
-            if (provider instanceof ethers.providers.Provider) {
-                provider = await MulticallProvider.create(provider);
-            } else {
-                provider = await MulticallProvider.create(provider.provider || this.provider);
+        // try to activate a multicall provider if it isn't already one
+        try {
+            if (!(options.provider instanceof MulticallProvider)) {
+                if (options.provider instanceof ethers.providers.Provider) {
+                    options.provider = await MulticallProvider.create(options.provider);
+                } else if (options.provider) {
+                    options.provider = await MulticallProvider.create(options.provider.provider || this.provider);
+                }
             }
+        } catch {
         }
 
-        return new Contract(contract_address, contract_abi, provider);
+        return new Contract(contract_address, contract_abi, options.provider);
     }
 
     /**
@@ -627,5 +583,63 @@ export default class Web3Controller extends EventEmitter {
             blockExplorerUrls: options.blockExplorerUrls,
             iconUrls: options.iconUrls
         }]);
+    }
+
+    /**
+     * Constructs a multicall provider on demand
+     *
+     * @private
+     */
+    private async _constructMulticallProvider (): Promise<MulticallProvider> {
+        return MulticallProvider.create(this.provider);
+    }
+
+    /**
+     * Uses the web3modal library to display the web3 modal to the user
+     *
+     * @param refresh
+     *
+     * @private
+     */
+    private async _connectWeb3Provider (refresh = false): Promise<void> {
+        if (!refresh) {
+            if (!this.modal) {
+                throw new Error('Must be called from a browser');
+            }
+
+            if (!this._cacheProvider && this.modal.clearCachedProvider) {
+                await this.modal.clearCachedProvider();
+            }
+
+            this._instance = await this.modal.connect();
+
+            this._instance.on('connect', async (info: { chainId: any }) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('connect', BigNumber.from(info.chainId).toNumber());
+            });
+
+            this._instance.on('disconnect', (error: { code: number, message: string }) => {
+                this.emit('disconnect', error);
+            });
+
+            this._instance.on('accountsChanged', async (accounts: string[]) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('accountsChanged', accounts);
+            });
+
+            this._instance.on('chainChanged', async (chainId: any) => {
+                await this._connectWeb3Provider(true);
+
+                this.emit('chainChanged', BigNumber.from(chainId).toNumber());
+            });
+
+            this._instance.on('error', (error: any) => {
+                this.emit('error', error);
+            });
+        }
+
+        this._web3Provider = new ethers.providers.Web3Provider(this._instance);
     }
 }

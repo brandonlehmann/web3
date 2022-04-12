@@ -22,6 +22,9 @@ import { ethers } from 'ethers';
 import MulticallProvider from './MulticallProvider';
 import { sleep } from './Tools';
 
+/**
+ * Represents a contract call that can be used to construct a byteform ABI call
+ */
 export interface IContractCall {
     contract: {
         address: string;
@@ -32,21 +35,32 @@ export interface IContractCall {
     params: any[];
 }
 
+/** @ignore */
 interface IContractType extends ethers.Contract {
     exec: <Type extends any[] = any[]>() => Promise<Type>;
     callMethod: (name: string, ...params: any[]) => IContractCall;
     call: (name: string, ...params: any[]) => IContractType;
 }
 
+/**
+ * Represents an extension to ethers.Contract that allows us to easily dump out
+ * the contract calls so that they can be used within a multicall execution pattern
+ */
 export default class Contract extends ethers.Contract implements IContractType {
-    private _callMethods: Map<string, IContractCall> = new Map<string, IContractCall>();
     public readonly multicallProvider?: MulticallProvider;
     protected _callChain: IContractCall[] = [];
-
+    private _callMethods: Map<string, IContractCall> = new Map<string, IContractCall>();
     private readonly _addressOrName: string;
     private readonly _contractInterface: ethers.ContractInterface;
     private readonly _signerOrProvider: ethers.Signer | ethers.providers.Provider | MulticallProvider | undefined;
 
+    /**
+     * Creates a new instance of the object
+     *
+     * @param addressOrName
+     * @param contractInterface
+     * @param signerOrProvider
+     */
     constructor (
         addressOrName: string,
         contractInterface: ethers.ContractInterface,

@@ -20,11 +20,32 @@
 
 import BaseContract from './BaseContract';
 
+/**
+ * Basic representation of a signature verifier compatible contract.
+ * If additional functionality is required, this contract can be
+ * extended via inheritance
+ */
 export default class Verifier extends BaseContract {
+    /**
+     * Verifies the signature of a specific hash value
+     *
+     * @param hash
+     * @param v
+     * @param r
+     * @param s
+     */
     public async verifyHash (hash: string, v: number, r: string, s: string): Promise<string> {
         return this.retryCall<string>(this.contract.verifyHash, hash, v, r, s);
     }
 
+    /**
+     * Verifies the signature of a specific message
+     *
+     * @param message
+     * @param v
+     * @param r
+     * @param s
+     */
     public async verifyString (message: string, v: number, r: string, s: string): Promise<string> {
         return this.retryCall<string>(this.contract.verifyString, message, v, r, s);
     }

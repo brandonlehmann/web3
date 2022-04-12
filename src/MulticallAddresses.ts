@@ -18,6 +18,9 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+/**
+ * Holds a list of known multicall addresses indexed by chainId
+ */
 const multicallAddresses: Map<number, string> = new Map<number, string>();
 
 {
@@ -51,6 +54,9 @@ const multicallAddresses: Map<number, string> = new Map<number, string>();
 
 export { multicallAddresses };
 
+/**
+ * Standard multicall contract ABI stored for ease of use
+ */
 export const multicallAbi = [
     {
         constant: true,

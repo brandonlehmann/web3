@@ -31,6 +31,9 @@ export const createElement = (type: string): JQuery<HTMLElement> => {
     return $(document.createElement(type));
 };
 
+/**
+ * Represents Loading Overlay options
+ */
 export interface ILoadingOverlayOptions {
     override?: boolean;
     background?: string;
@@ -55,7 +58,7 @@ export interface ILoadingOverlayOptions {
     customOrder?: number;
     text?: string;
     testAnimation?: string;
-    textAutoResize?:boolean;
+    textAutoResize?: boolean;
     textResizeFactor?: number;
     textColor?: string;
     textClass?: string;
@@ -79,9 +82,13 @@ export interface ILoadingOverlayOptions {
     zIndex?: number;
 }
 
+/**
+ * Overlay display helper
+ */
 export class Overlay {
     /**
      * Hides the displayed overlay
+     *
      * @param options
      * @param target
      */
@@ -92,6 +99,7 @@ export class Overlay {
 
     /**
      * Updates the progress in the current overlay
+     *
      * @param options
      * @param target
      */
@@ -102,6 +110,7 @@ export class Overlay {
 
     /**
      * Resizes the overlay
+     *
      * @param options
      * @param target
      */
@@ -112,6 +121,7 @@ export class Overlay {
 
     /**
      * Shows an overlay with the specified options
+     *
      * @param text
      * @param options
      * @param target
@@ -125,6 +135,7 @@ export class Overlay {
 
     /**
      * Updates the text in the current overlay
+     *
      * @param text
      * @param options
      * @param target
@@ -139,6 +150,7 @@ export class Overlay {
 
 /**
  * Displays a modal with jquery using the supplied elements, message, and style
+ *
  * @param success
  * @param message
  * @param statusTextElement
@@ -150,7 +162,7 @@ export const showStatusModal = (
     message: any,
     statusTextElement: JQuery<HTMLElement> = $('#statusText'),
     statusModalElement: JQuery<HTMLElement> = $('#statusModal'),
-    style?: {successClass?: string, errorClass?: string}
+    style?: { successClass?: string, errorClass?: string }
 ) => {
     if (success) {
         statusTextElement.addClass(style?.successClass || 'alert-success');

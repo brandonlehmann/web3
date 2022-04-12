@@ -20,9 +20,13 @@
 
 import { ethers } from 'ethers';
 
+/**
+ * ABI encoder helper that is used for encoding multicall calls to byteform
+ */
 export default class ABI {
     /**
      * Encodes the values as an ABI structured string
+     *
      * @param name
      * @param inputs
      * @param params
@@ -45,6 +49,7 @@ export default class ABI {
 
     /**
      * Decodes an ABI encoded result
+     *
      * @param outputs
      * @param data
      */

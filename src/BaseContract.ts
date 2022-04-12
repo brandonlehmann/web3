@@ -22,10 +22,37 @@ import Contract, { IContractCall } from './Contract';
 import { ethers } from 'ethers';
 import MulticallProvider from './MulticallProvider';
 
+/** @ignore */
 export type IContract = ethers.Contract | Contract;
 
+/**
+ * Represents a simple wrapper around an ethers.Contract that adds
+ * some additional capabilities such as easy multicall structures
+ * a retryCall<Type> method for view operations, allows for connecting
+ * the contract to a different signerOrProvider without redeclaring, etc.
+ */
 export default class BaseContract {
+    /**
+     * Constructs a new instance of the object
+     *
+     * @param _contract
+     */
+    constructor (_contract: IContract) {
+        if (!(_contract instanceof Contract)) {
+            this._contract = new Contract(_contract.address, _contract.interface, _contract.provider);
+        } else {
+            this._contract = _contract;
+        }
+    }
+
     private _contract: Contract;
+
+    /**
+     * Returns the underlying contract interface
+     */
+    public get contract (): Contract {
+        return this._contract;
+    }
 
     /**
      * Returns the contract address
@@ -35,22 +62,8 @@ export default class BaseContract {
     }
 
     /**
-     * Returns the underlying contract interface
-     */
-    public get contract (): Contract {
-        return this._contract;
-    }
-
-    constructor (_contract: IContract) {
-        if (!(_contract instanceof Contract)) {
-            this._contract = new Contract(_contract.address, _contract.interface, _contract.provider);
-        } else {
-            this._contract = _contract;
-        }
-    }
-
-    /**
      * Returns an interface allowing for us with the multicall method of a provider
+     *
      * @param name
      * @param params
      */
@@ -68,6 +81,15 @@ export default class BaseContract {
     }
 
     /**
+     * Returns whether the specified interface is supported by the contract
+     *
+     * @param interfaceId
+     */
+    public supportsInterface (interfaceId: string): Promise<boolean> {
+        return this.retryCall<boolean>(this.contract.supportsInterface, interfaceId);
+    }
+
+    /**
      * Automatically keeps trying the call unless we get a revert exception
      *
      * @param func
@@ -76,14 +98,5 @@ export default class BaseContract {
      */
     protected async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
         return this._contract.retryCall(func, ...params);
-    }
-
-    /**
-     * Returns whether the specified interface is supported by the contract
-     *
-     * @param interfaceId
-     */
-    public supportsInterface (interfaceId: string): Promise<boolean> {
-        return this.retryCall<boolean>(this.contract.supportsInterface, interfaceId);
     }
 }
