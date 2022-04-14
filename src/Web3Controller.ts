@@ -208,13 +208,13 @@ export default class Web3Controller extends EventEmitter {
     }
 
     /**
-     * Retrieves a list of EVM chains from chainlist.org
+     * Retrieves a list of EVM chains from chainid.network
      *
      * @param listUrl
      * @private
      */
     private static async getChains (
-        listUrl = 'https://cloudflare-ipfs.com/ipfs/Qma4DkUFVDmLiYZHrmCVPh3fxrJM7TgskPymTJnQmcFhaW'
+        listUrl = 'https://chainid.network/chains.json'
     ): Promise<ChainlistMap> {
         if (ChainListCache.size !== 0) {
             return ChainListCache;
