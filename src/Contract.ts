@@ -110,7 +110,8 @@ export default class Contract extends ethers.Contract implements IContractType {
         try {
             return func(...params);
         } catch (e: any) {
-            if (e.toString().toLowerCase().includes('revert exception')) {
+            if (e.toString().toLowerCase().includes('revert exception') ||
+                e.toString().toLowerCase().includes('not a function')) {
                 throw e;
             }
 

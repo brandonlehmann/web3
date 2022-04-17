@@ -134,7 +134,7 @@ export default class ERC1155 extends BaseContract {
      */
     public async discoverMaximumId (): Promise<BigNumber> {
         try {
-            return this.maximumID();
+            return await this.maximumID();
         } catch {
             for (let i = (this._maximumID.isZero() ? BigNumber.from(1) : this._maximumID);
                 i.lt(MaxApproval);

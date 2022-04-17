@@ -8,7 +8,7 @@ import { ERC1155, Web3Controller } from '../src';
     {
         const token = new ERC1155(
             await controller.loadContract(
-                '0x40ded8808a968e1067abb91e13c888c9a46ba099'));
+                '0x40ded8808A968E1067ABB91E13C888C9A46ba099'));
 
         const max = await token.discoverMaximumId();
 
