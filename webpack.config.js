@@ -6,8 +6,9 @@ const path = require('path');
 module.exports = {
     mode: 'production',
     entry: {
-        Web3: './dist/index.js',
-        Web3UITools: './dist/UITools.js'
+        Web3Controller: './dist/Web3Controller.js',
+        Web3UITools: './dist/UITools.js',
+        Web3Bundle: './dist/bundle.js'
     },
     output: {
         path: path.resolve(__dirname, 'dist'),

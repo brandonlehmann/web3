@@ -21,6 +21,8 @@
 import { BigNumber, ethers } from 'ethers';
 import fetch from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
+import { MaxApproval } from './ERC20';
+import { IContractCall } from './Contract';
 
 /**
  * Represents an ERC1155 attribute in the metadata
@@ -48,6 +50,8 @@ export interface IERC1155Metadata {
  * extended via inheritance
  */
 export default class ERC1155 extends BaseContract {
+    private _maximumID: BigNumber = BigNumber.from(0);
+
     constructor (
         _contract: IContract,
         public IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
@@ -66,13 +70,86 @@ export default class ERC1155 extends BaseContract {
     }
 
     /**
+     * Attempts to determine the balance of the owner across all IDs
+     *
+     * @param owner
+     */
+    public async balanceOfOwner (owner: string): Promise<BigNumber> {
+        const maxId = await this.discoverMaximumId();
+
+        if (this.contract.multicallProvider) {
+            const calls: IContractCall[] = [];
+
+            for (let i = BigNumber.from(1); i.lt(maxId); i = i.add(1)) {
+                calls.push(this.call('balanceOf', owner, i));
+            }
+
+            const balances = await this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
+
+            let result = BigNumber.from(0);
+
+            for (const balance of balances) {
+                result = result.add(balance);
+            }
+
+            return result;
+        } else {
+            const promises = [];
+
+            for (let i = BigNumber.from(1); i.lt(maxId); i = i.add(1)) {
+                promises.push(this.balanceOf(owner, i));
+            }
+
+            const balances = await Promise.all(promises);
+
+            let result = BigNumber.from(0);
+
+            for (const balance of balances) {
+                result = result.add(balance);
+            }
+
+            return result;
+        }
+    }
+
+    /**
      * Get the balance of multiple account/token pairs
      *
      * @param owners
      * @param ids
      */
     public async balanceOfBatch (owners: string[], ids: ethers.BigNumberish[]): Promise<ethers.BigNumberish[]> {
-        return this.retryCall<ethers.BigNumberish[]>(this.contract.balanceOfBatch, owners, ids);
+        return this.retryCall<BigNumber[]>(this.contract.balanceOfBatch, owners, ids);
+    }
+
+    /**
+     * Attempt to discover the maximum ID through brute forcing.
+     *
+     * Note: This method is *very* slow upon first run if maximumID() is not supported and the results
+     * are cached internally to make subsequent calls faster; however, subsequent calls will check to
+     * see if the maximum id has increased.
+     *
+     * Note: We loop in here until we get a revert... thus we cannot reasonably account for any burn
+     * mechanics if the URI for a burned ID is destroyed by the contract
+     */
+    public async discoverMaximumId (): Promise<BigNumber> {
+        try {
+            return this.maximumID();
+        } catch {
+            for (let i = (this._maximumID.isZero() ? BigNumber.from(1) : this._maximumID);
+                i.lt(MaxApproval);
+                i = i.add(1)) {
+                try {
+                    await this.uri(i);
+
+                    this._maximumID = i;
+                } catch {
+                    break;
+                }
+            }
+
+            return this._maximumID;
+        }
     }
 
     /**
@@ -92,6 +169,13 @@ export default class ERC1155 extends BaseContract {
      */
     public async isApprovedForAll (owner: string, operator: string): Promise<boolean> {
         return this.retryCall<boolean>(this.contract.isApprovedForAll, owner, operator);
+    }
+
+    /**
+     * Retrieves the maximum ID if the contract supports this call
+     */
+    public async maximumID (): Promise<BigNumber> {
+        return this.retryCall<BigNumber>(this.contract.maximumID);
     }
 
     /**

@@ -1,4 +1,4 @@
-import { ERC20, ERC721, Web3Controller } from '../src';
+import { ERC1155, Web3Controller } from '../src';
 
 (async () => {
     const controller = await Web3Controller.load('Test App', {
@@ -6,30 +6,14 @@ import { ERC20, ERC721, Web3Controller } from '../src';
     });
 
     {
-        const token = new ERC20(
+        const token = new ERC1155(
             await controller.loadContract(
-                '0x6a31Aca4d2f7398F04d9B6ffae2D898d9A8e7938'));
+                '0x40ded8808a968e1067abb91e13c888c9a46ba099'));
 
-        console.log(await token.tokenMetadata());
-    }
+        const max = await token.discoverMaximumId();
 
-    {
-        const contract = await controller.loadContract('0x82a0ac751c118c7d4dee71fbb7436862d339e550');
-        const nft = new ERC721(contract);
-        console.log(await nft.royaltyInfo(1, Math.pow(10, 10)));
+        console.log(max, max.toString());
 
-        console.log(await nft.ownedMetadata('0xb2D555044CdE0a8A297F082f05ae6B1eFf663784'));
-
-        console.log(
-            await nft.contract.call('royaltyInfo', 1, Math.pow(10, 10))
-                .call('tokenURI', 1)
-                .exec());
-
-        console.log(await controller.multicall([
-            nft.call('royaltyInfo', 1, Math.pow(10, 10)),
-            nft.call('tokenURI', 1)
-        ]));
-
-        console.log(await nft.tokenMetadata());
+        console.log(await token.balanceOfOwner('0xb2D555044CdE0a8A297F082f05ae6B1eFf663784'));
     }
 })();
