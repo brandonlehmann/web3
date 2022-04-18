@@ -1033,19 +1033,12 @@
   resolved "https://registry.yarnpkg.com/@types/estree/-/estree-0.0.51.tgz#cfd70924a25a3fd32b218e5e420e6897e1ac4f40"
   integrity sha512-CuPgU6f3eT/XgKKPqKd/gLZV1Xmvf1a2R5POBOGQa6uv82xpls89HU5zKeVoyR8XzHd1RGNOlQlvUe3CFkjWNQ==
 
-"@types/jquery@*", "@types/jquery@^3.5.13", "@types/jquery@^3.5.14":
+"@types/jquery@*", "@types/jquery@^3.5.14":
   version "3.5.14"
   resolved "https://registry.yarnpkg.com/@types/jquery/-/jquery-3.5.14.tgz#ac8e11ee591e94d4d58da602cb3a5a8320dee577"
   integrity sha512-X1gtMRMbziVQkErhTQmSe2jFwwENA/Zr+PprCkF63vFq+Yt5PZ4AlKqgmeNlwgn7dhsXEK888eIW2520EpC+xg==
   dependencies:
     "@types/sizzle" "*"
-
-"@types/jqueryui@^1.12.16":
-  version "1.12.16"
-  resolved "https://registry.yarnpkg.com/@types/jqueryui/-/jqueryui-1.12.16.tgz#9e319f7db39490db950cba77fe83887e0ad3e1d9"
-  integrity sha512-6huAQDpNlso9ayaUT9amBOA3kj02OCeUWs+UvDmbaJmwkHSg/HLsQOoap/D5uveN9ePwl72N45Bl+Frp5xyG1Q==
-  dependencies:
-    "@types/jquery" "*"
 
 "@types/json-schema@*", "@types/json-schema@^7.0.8", "@types/json-schema@^7.0.9":
   version "7.0.9"
@@ -3647,12 +3640,12 @@ functional-red-black-tree@^1.0.1:
   resolved "https://registry.yarnpkg.com/functional-red-black-tree/-/functional-red-black-tree-1.0.1.tgz#1b0ab3bd553b2a0d6399d29c0e3ea0b252078327"
   integrity sha1-GwqzvVU7Kg1jmdKcDj6gslIHgyc=
 
-"gasparesganga-jquery-loading-overlay@https://github.com/brandonlehmann/jquery-loading-overlay":
-  version "2.1.7"
-  resolved "https://github.com/brandonlehmann/jquery-loading-overlay#be125fb9c45fb95498fbb487bc79e6cdac81a2cf"
+"gasparesganga-jquery-loading-overlay@https://github.com/brandonlehmann/jquery-loading-overlay#31c61509":
+  version "2.1.8"
+  resolved "https://github.com/brandonlehmann/jquery-loading-overlay#31c61509eb9321e24bf881e668a8e7168b49cda7"
   dependencies:
-    "@types/jquery" "^3.5.13"
-    jquery ">=1.7.0"
+    "@types/jquery" "^3.5.14"
+    jquery "^3.6.0"
 
 gensync@^1.0.0-beta.2:
   version "1.0.0-beta.2"
@@ -4281,19 +4274,7 @@ jest-worker@^27.4.5:
     merge-stream "^2.0.0"
     supports-color "^8.0.0"
 
-jquery-modal@^0.9.2:
-  version "0.9.2"
-  resolved "https://registry.yarnpkg.com/jquery-modal/-/jquery-modal-0.9.2.tgz#dbc046ec93440c46466fa8e21a6fc38c102a3ded"
-  integrity sha512-Bx6jTBuiUbdywriWd0UAZK9v7FKEDCOD5uRh47qd4coGvx+dG4w8cOGe4TG2OoR1dNrXn6Aqaeu8MAA+Oz7vOw==
-
-jquery-ui@^1.13.1:
-  version "1.13.1"
-  resolved "https://registry.yarnpkg.com/jquery-ui/-/jquery-ui-1.13.1.tgz#d0b7a42e73a04c31bb5706adf86f6f8942f64eaa"
-  integrity sha512-2VlU59N5P4HaumDK1Z3XEVjSvegFbEOQRgpHUBaB2Ak98Axl3hFhJ6RFcNQNuk9SfL6WxIbuLst8dW/U56NSiA==
-  dependencies:
-    jquery ">=1.8.0 <4.0.0"
-
-jquery@>=1.7, jquery@>=1.7.0, "jquery@>=1.8.0 <4.0.0", jquery@^3.6.0:
+jquery@>=1.7, jquery@^3.6.0:
   version "3.6.0"
   resolved "https://registry.yarnpkg.com/jquery/-/jquery-3.6.0.tgz#c72a09f15c1bdce142f49dbf1170bdf8adac2470"
   integrity sha512-JVzAR/AjBvVt2BmYhxRCSYysDsPcssdmTFnzyLEts9qNwmjmu4JTAMYubEfwVOSwpQ1I1sKKFcxhZCI2buerfw==
