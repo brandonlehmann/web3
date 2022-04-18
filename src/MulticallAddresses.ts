@@ -42,6 +42,7 @@ const multicallAddresses: Map<number, string> = new Map<number, string>();
         137: '0x11ce4B23bD875D7F5C6a31084f55fDe1e9A87507',
         250: '0x0118EF741097D0d3cc88e46233Da1e407d9ac139',
         1337: '0x77dca2c955b15e9de4dbbcf1246b4b85b651e50e',
+        4002: '0xd84a88b4011d006aD3bff1F3246AbCf4565b912B',
         42161: '0x813715eF627B01f4931d8C6F8D2459F26E19137E',
         43114: '0x7f3aC7C283d7E6662D886F494f7bc6F1993cDacf',
         80001: '0x08411ADd0b5AA8ee47563b146743C13b3556c9Cc'

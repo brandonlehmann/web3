@@ -109,10 +109,11 @@ export default class Contract extends ethers.Contract implements IContractType {
     public async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
         try {
             return func(...params);
-        } catch (e: any) {
-            if (e.toString().toLowerCase().includes('revert exception') ||
-                e.toString().toLowerCase().includes('not a function')) {
-                throw e;
+        } catch (error: any) {
+            const e = error.toString().toLowerCase();
+
+            if (e.includes('revert exception') || e.includes('not a function')) {
+                throw error;
             }
 
             await sleep(1);

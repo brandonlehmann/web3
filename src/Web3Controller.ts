@@ -211,12 +211,14 @@ export default class Web3Controller extends EventEmitter {
      * Retrieves a list of EVM chains from chainid.network
      *
      * @param listUrl
+     * @param forceRefresh
      * @private
      */
-    private static async getChains (
-        listUrl = 'https://chainid.network/chains.json'
+    public static async getChains (
+        listUrl = 'https://chainid.network/chains.json',
+        forceRefresh = false
     ): Promise<ChainlistMap> {
-        if (ChainListCache.size !== 0) {
+        if (ChainListCache.size !== 0 && !forceRefresh) {
             return ChainListCache;
         }
 
@@ -230,7 +232,7 @@ export default class Web3Controller extends EventEmitter {
 
         const result = new Map<number, IChainlistChain>();
 
-        for (const chain of json) {
+        for (const chain of json.filter(elem => elem.rpc.length !== 0)) {
             chain.rpc = chain.rpc.filter(elem => !elem.includes('$'));
             result.set(chain.chainId, chain);
         }
@@ -459,7 +461,8 @@ export default class Web3Controller extends EventEmitter {
                 if (options.provider instanceof ethers.providers.Provider) {
                     options.provider = await MulticallProvider.create(options.provider);
                 } else if (options.provider) {
-                    options.provider = await MulticallProvider.create(options.provider.provider || this.provider);
+                    options.provider = await MulticallProvider.create(
+                        options.provider.provider || this.provider);
                 }
             }
         } catch {

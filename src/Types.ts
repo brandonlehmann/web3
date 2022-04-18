@@ -79,9 +79,20 @@ export interface IChainParams {
 export interface IChainlistChain {
     name: string;
     chain: string;
+    network: string;
     icon: string;
-    chainId: number;
+    rpc: string[];
+    faucets: string[];
+    nativeCurrency: {
+        name: string;
+        symbol: string;
+        decimals: number;
+    };
     infoURL: string;
+    shortName: string;
+    chainId: number;
+    networkId: number;
+    slip44: number;
     ens: {
         registry: string;
     };
@@ -90,15 +101,6 @@ export interface IChainlistChain {
         url: string;
         standard: string;
     }[];
-    nativeCurrency: {
-        name: string;
-        symbol: string;
-        decimals: number;
-    };
-    networkId: number;
-    rpc: string[];
-    shortName: string;
-    slip44: number;
 }
 
 /**
