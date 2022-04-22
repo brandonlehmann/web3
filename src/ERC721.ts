@@ -22,11 +22,14 @@ import { BigNumber, ethers } from 'ethers';
 import { IContractCall } from './Contract';
 import fetch, { Response } from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
+import { NFTAssetType } from './Types';
+import { detectAssetType } from './Tools';
 
 /**
  * Represents an ERC721 attribute in the metadata
  */
 export interface IERC721Attribute {
+    display_type?: string;
     trait_type: string;
     value: string | number;
     count?: number;
@@ -40,10 +43,16 @@ export interface IERC721Attribute {
  */
 export interface IERC721Metadata {
     tokenId: BigNumber;
+    type: NFTAssetType,
     contract: string;
     name: string;
     description: string;
     image: string;
+    image_data?: string;
+    external_url?: string;
+    background_color?: string;
+    animation_url?: string;
+    youtube_url?: string;
     dna?: string;
     edition?: number;
     date?: number;
@@ -163,6 +172,29 @@ export default class ERC721 extends BaseContract {
     }
 
     /**
+     * Fetches the metadata for the specified token ID
+     *
+     * @param tokenId
+     */
+    public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721Metadata> {
+        const uri = await this.tokenURI(tokenId);
+
+        const response = await fetch(uri);
+
+        if (!response.ok) {
+            throw new Error('Error fetching metadata JSON');
+        }
+
+        const json: IERC721Metadata = await response.json();
+
+        json.image = json.image.replace('ipfs://', this.IPFSGateway);
+        json.tokenId = (tokenId as BigNumber);
+        json.contract = this.contract.address;
+
+        return json;
+    }
+
+    /**
      * A descriptive name for a collection of NFTs in this contract
      */
     public async name (): Promise<string> {
@@ -204,7 +236,9 @@ export default class ERC721 extends BaseContract {
             }
 
             return (await Promise.all(promises))
-                .filter(elem => elem !== undefined);
+                .filter(elem => elem !== undefined)
+                .sort((a, b) =>
+                    a.tokenId.toNumber() - b.tokenId.toNumber());
         }
     }
 
@@ -300,29 +334,6 @@ export default class ERC721 extends BaseContract {
         approved = true
     ): Promise<ethers.ContractTransaction> {
         return this.contract.setApprovalForAll(operator, approved);
-    }
-
-    /**
-     * Fetches the metadata for the specified token ID
-     *
-     * @param tokenId
-     */
-    public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721Metadata> {
-        const uri = await this.tokenURI(tokenId);
-
-        const response = await fetch(uri);
-
-        if (!response.ok) {
-            throw new Error('Error fetching metadata JSON');
-        }
-
-        const json: IERC721Metadata = await response.json();
-
-        json.image = json.image.replace('ipfs://', this.IPFSGateway);
-        json.tokenId = (tokenId as BigNumber);
-        json.contract = this.contract.address;
-
-        return json;
     }
 
     /**
@@ -452,6 +463,7 @@ export default class ERC721 extends BaseContract {
             }
 
             const json: IERC721Metadata = await r.response.json();
+            json.type = detectAssetType(json.image);
             json.image = json.image.replace('ipfs://', this.IPFSGateway);
             json.tokenId = (r.id as BigNumber);
             json.contract = this.contract.address;
@@ -459,6 +471,7 @@ export default class ERC721 extends BaseContract {
             result.push(json);
         }
 
-        return result;
+        return result.sort((a, b) =>
+            a.tokenId.toNumber() - b.tokenId.toNumber());
     }
 }

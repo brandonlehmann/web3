@@ -98,6 +98,7 @@ export default class MulticallProvider {
      * @deprecated
      * @param calls
      * @param batchSize
+     * @alias aggregate
      */
     public async multicall<Type extends any[] = any[]> (
         calls: IContractCall[],
@@ -133,7 +134,7 @@ export default class MulticallProvider {
             const response = await this.contract.retryCall<{
                 blockNumber: ethers.BigNumber,
                 returnData: string[]
-            }>(this.contract.aggregate, batch);
+            }>(this.contract.aggregate || this.contract.multicall, batch);
 
             for (let i = 0; i < batch.length; i++) {
                 const outputs = calls[i].outputs;

@@ -172,3 +172,4 @@ contract_cache/
 contractCache/
 bin/
 dist/
+test/

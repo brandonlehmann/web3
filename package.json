@@ -1,6 +1,6 @@
 {
   "name": "@brandonlehmann/web3",
-  "version": "3.0.8",
+  "version": "3.0.9",
   "description": "A web3 helper library for managing provider connections, contracts, and web3 providers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -13,8 +13,8 @@
     "build:typescript": "./node_modules/.bin/tsc",
     "build:webpack": "./node_modules/.bin/webpack",
     "test": "yarn test:style",
-    "test:style": "./node_modules/.bin/eslint src/**/*.ts test/**/*.ts",
-    "fix:style": "./node_modules/.bin/eslint --fix src/**/*.ts test/**/*.ts",
+    "test:style": "./node_modules/.bin/eslint src/**/*.ts",
+    "fix:style": "./node_modules/.bin/eslint --fix src/**/*.ts",
     "prepublishOnly": "yarn build"
   },
   "repository": {

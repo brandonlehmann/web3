@@ -19,10 +19,12 @@
 // SOFTWARE.
 
 import { BigNumber, ethers } from 'ethers';
-import fetch from 'cross-fetch';
+import fetch, { Response } from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
 import { MaxApproval } from './ERC20';
 import { IContractCall } from './Contract';
+import { NFTAssetType } from './Types';
+import { detectAssetType } from './Tools';
 
 /**
  * Represents an ERC1155 attribute in the metadata
@@ -35,7 +37,8 @@ export interface IERC1155Properties {
  * Represents the metadata of an ERC1155 token
  */
 export interface IERC1155Metadata {
-    tokenId: BigNumber
+    tokenId: BigNumber;
+    type: NFTAssetType;
     contract: string;
     name: string;
     decimals?: number;
@@ -67,6 +70,16 @@ export default class ERC1155 extends BaseContract {
      */
     public async balanceOf (owner: string, id: ethers.BigNumberish): Promise<BigNumber> {
         return this.retryCall<BigNumber>(this.contract.balanceOf, owner, id);
+    }
+
+    /**
+     * Get the balance of multiple account/token pairs
+     *
+     * @param owners
+     * @param ids
+     */
+    public async balanceOfBatch (owners: string[], ids: ethers.BigNumberish[]): Promise<ethers.BigNumberish[]> {
+        return this.retryCall<BigNumber[]>(this.contract.balanceOfBatch, owners, ids);
     }
 
     /**
@@ -113,16 +126,6 @@ export default class ERC1155 extends BaseContract {
     }
 
     /**
-     * Get the balance of multiple account/token pairs
-     *
-     * @param owners
-     * @param ids
-     */
-    public async balanceOfBatch (owners: string[], ids: ethers.BigNumberish[]): Promise<ethers.BigNumberish[]> {
-        return this.retryCall<BigNumber[]>(this.contract.balanceOfBatch, owners, ids);
-    }
-
-    /**
      * Attempt to discover the maximum ID through brute forcing.
      *
      * Note: This method is *very* slow upon first run if maximumID() is not supported and the results
@@ -131,13 +134,29 @@ export default class ERC1155 extends BaseContract {
      *
      * Note: We loop in here until we get a revert... thus we cannot reasonably account for any burn
      * mechanics if the URI for a burned ID is destroyed by the contract
+     *
+     * @param possibleMaxId
      */
-    public async discoverMaximumId (): Promise<BigNumber> {
+    public async discoverMaximumId (
+        possibleMaxId: ethers.BigNumberish = MaxApproval
+    ): Promise<BigNumber> {
         try {
             return await this.maximumID();
         } catch {
-            for (let i = (this._maximumID.isZero() ? BigNumber.from(1) : this._maximumID);
-                i.lt(MaxApproval);
+            if (this._maximumID.isZero()) {
+                try {
+                    await this.uri(0);
+                } catch {
+                    try {
+                        await this.uri(1);
+
+                        this._maximumID = BigNumber.from(1);
+                    } catch {}
+                }
+            }
+
+            for (let i = this._maximumID;
+                i.lt(possibleMaxId);
                 i = i.add(1)) {
                 try {
                     await this.uri(i);
@@ -205,6 +224,128 @@ export default class ERC1155 extends BaseContract {
     }
 
     /**
+     * A descriptive name for a collection of NFTs in this contract
+     */
+    public async name (): Promise<string> {
+        return this.retryCall<string>(this.contract.name);
+    }
+
+    /**
+     * Returns the metadata for all NFTs owned by the specified account by
+     * scanning through the range of IDs provided
+     *
+     * @param owner
+     * @param startId
+     * @param endId
+     */
+    public async ownedMetadata (
+        owner: string,
+        startId: ethers.BigNumberish = BigNumber.from(1),
+        endId: ethers.BigNumberish = this._maximumID
+    ): Promise<IERC1155Metadata[]> {
+        const tokenIds = await this.ownedTokenIds(owner, startId, endId);
+
+        if (this.contract.multicallProvider) {
+            const uriRequests: {id: ethers.BigNumberish, uri: string}[] = [];
+
+            const calls: IContractCall[] = [];
+
+            for (const tokenId of tokenIds) {
+                calls.push(this.call('uri', tokenId));
+            }
+
+            const uris = await this.contract.multicallProvider.aggregate<string[]>(calls);
+
+            for (let i = 0; i < tokenIds.length; i++) {
+                uriRequests.push({
+                    id: tokenIds[i],
+                    uri: uris[i]
+                });
+            }
+
+            return this.metadataBulk(uriRequests);
+        } else {
+            const promises = [];
+
+            for (const tokenId of tokenIds) {
+                promises.push(this.metadata(tokenId));
+            }
+
+            return (await Promise.all(promises))
+                .filter(elem => elem !== undefined)
+                .sort((a, b) =>
+                    a.tokenId.toNumber() - b.tokenId.toNumber());
+        }
+    }
+
+    /**
+     * Returns an array of token IDs owned by the specified account by
+     * scanning through the range of IDs provided
+     *
+     * @param owner
+     * @param startId
+     * @param endId
+     */
+    public async ownedTokenIds (
+        owner: string,
+        startId: ethers.BigNumberish = BigNumber.from(1),
+        endId: ethers.BigNumberish = this._maximumID
+    ): Promise<BigNumber[]> {
+        const results: BigNumber[] = [];
+
+        if (this.contract.multicallProvider) {
+            const calls: IContractCall[] = [];
+
+            for (let tokenId = BigNumber.from(startId);
+                tokenId.lte(BigNumber.from(endId));
+                tokenId = tokenId.add(1)) {
+                calls.push(this.call('balanceOf', owner, tokenId));
+            }
+
+            const response = await this.contract.multicallProvider.aggregate<BigNumber[]>(calls);
+
+            for (let i = 0; i < response.length; i++) {
+                if (!response[i].isZero()) {
+                    response.push(BigNumber.from(BigNumber.from(startId).add(i)));
+                }
+            }
+        } else {
+            for (let tokenId = BigNumber.from(startId);
+                tokenId.lte(BigNumber.from(endId));
+                tokenId = tokenId.add(1)) {
+                if (!(await this.balanceOf(owner, tokenId)).isZero()) {
+                    results.push(tokenId);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    /**
+     * Returns how much royalty is owed and to whom, based on a sale price that may be denominated in any unit of
+     * exchange. The royalty amount is denominated and should be payed in that same unit of exchange.
+     *
+     * @param tokenId
+     * @param salePrice
+     */
+    public async royaltyInfo (
+        tokenId: ethers.BigNumberish,
+        salePrice: ethers.BigNumberish
+    ): Promise<{ receiver: string, royaltyAmount: BigNumber }> {
+        const [receiver, royaltyAmount] = await this.retryCall<any[]>(
+            this.contract.royaltyInfo,
+            tokenId,
+            salePrice
+        );
+
+        return {
+            receiver,
+            royaltyAmount
+        };
+    }
+
+    /**
      * Transfers `values` amount(s) of `ids` from the `from` address to the `to` address specified (with safety call).
      *
      * @param from
@@ -253,6 +394,16 @@ export default class ERC1155 extends BaseContract {
     }
 
     /**
+     * A distinct Uniform Resource Identifier (URI) for a given asset.
+     *
+     * @param tokenId
+     * @alias uri
+     */
+    public async tokenURI (tokenId: ethers.BigNumberish): Promise<string> {
+        return this.uri(tokenId);
+    }
+
+    /**
      * Returns the total amount of tokens stored by the contract.
      */
     public async totalSupply (id: ethers.BigNumberish): Promise<BigNumber> {
@@ -268,5 +419,52 @@ export default class ERC1155 extends BaseContract {
         const uri = await this.retryCall<string>(this.contract.uri, id);
 
         return uri.replace('ipfs://', this.IPFSGateway);
+    }
+
+    /**
+     * Retrieves bulk metadata
+     *
+     * @param tokens
+     * @protected
+     */
+    protected async metadataBulk (tokens: { id: ethers.BigNumberish, uri: string }[]): Promise<IERC1155Metadata[]> {
+        const result: IERC1155Metadata[] = [];
+
+        const promises = [];
+
+        const get = async (token: {
+            id: ethers.BigNumberish,
+            uri: string
+        }): Promise<{ id: ethers.BigNumberish, response: Response }> => {
+            return {
+                id: token.id,
+                response: await fetch(token.uri)
+            };
+        };
+
+        for (const token of tokens) {
+            promises.push(get(token));
+        }
+
+        const results = await Promise.all(promises);
+
+        for (const r of results) {
+            if (!r.response.ok) {
+                throw new Error('Error fetching metadata');
+            }
+
+            const json: IERC1155Metadata = await r.response.json();
+            if (json.image) {
+                json.image = json.image.replace('ipfs://', this.IPFSGateway);
+            }
+            json.type = detectAssetType(json.image);
+            json.tokenId = (r.id as BigNumber);
+            json.contract = this.contract.address;
+
+            result.push(json);
+        }
+
+        return result.sort((a, b) =>
+            a.tokenId.toNumber() - b.tokenId.toNumber());
     }
 }

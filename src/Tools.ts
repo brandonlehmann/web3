@@ -18,9 +18,26 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
+import { NFTAssetType } from './Types';
+
 /**
  * Sleeps for the specified time
  * @param timeout in seconds
  */
 export const sleep = async (timeout: number) =>
     new Promise(resolve => setTimeout(resolve, timeout * 1000));
+
+export const detectAssetType = (filename?: string): NFTAssetType => {
+    if (!filename) return NFTAssetType.UNKNOWN;
+    filename = filename.toLowerCase();
+
+    if (filename.includes('.mp4')) {
+        return NFTAssetType.VIDEO;
+    } else if (filename.includes('.gif')) {
+        return NFTAssetType.GIF;
+    } else if (filename.includes('.png') || filename.includes('.jpg') || filename.includes('.jpeg')) {
+        return NFTAssetType.IMAGE;
+    } else {
+        return NFTAssetType.UNKNOWN;
+    }
+};

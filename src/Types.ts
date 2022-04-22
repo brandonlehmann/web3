@@ -178,3 +178,13 @@ export interface IContractFetchAbiOptions {
 export interface IContractLoadOptions extends IContractFetchAbiOptions {
     provider?: ethers.Signer | ethers.providers.Provider | MulticallProvider;
 }
+
+/**
+ * Represents asset types found in image properties of some token types
+ */
+export enum NFTAssetType {
+    IMAGE,
+    GIF,
+    VIDEO,
+    UNKNOWN
+}
