@@ -111,6 +111,7 @@ export interface IWeb3ControllerOptions {
     chainId?: number;
     jsonRpcProvider?: string;
     webSocketProvider?: string;
+    noSingleton?: boolean;
 }
 
 /**

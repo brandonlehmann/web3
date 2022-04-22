@@ -163,11 +163,12 @@ export default class Web3Controller extends EventEmitter {
         appName = 'Unknown Application',
         options?: IWeb3ControllerOptions
     ): Promise<Web3Controller> {
-        if (Web3ControllerSingleton) {
+        options ||= {};
+        options.noSingleton ||= false;
+
+        if (Web3ControllerSingleton && !options.noSingleton) {
             return Web3ControllerSingleton;
         }
-
-        options ||= {};
 
         if (!options.chainId) {
             throw new Error('Must specify chain ID');
