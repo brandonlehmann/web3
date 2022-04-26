@@ -83,7 +83,7 @@ export default class Overlay {
      * @param target
      */
     public static hide (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
-        target = target || $(document.body);
+        target ||= $(document.body);
         target.LoadingOverlay('hide', options);
     }
 
@@ -94,7 +94,7 @@ export default class Overlay {
      * @param target
      */
     public static progress (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
-        target = target || $(document.body);
+        target ||= $(document.body);
         target.LoadingOverlay('progress', options);
     }
 
@@ -105,7 +105,7 @@ export default class Overlay {
      * @param target
      */
     public static resize (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
-        target = target || $(document.body);
+        target ||= $(document.body);
         target.LoadingOverlay('resize', options);
     }
 
@@ -118,7 +118,7 @@ export default class Overlay {
      */
     public static show (text: string, options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
         options = options || {};
-        options.text = text || options?.text;
+        options.text = text;
         target = target || $(document.body);
         target.LoadingOverlay('show', options);
     }
@@ -127,13 +127,10 @@ export default class Overlay {
      * Updates the text in the current overlay
      *
      * @param text
-     * @param options
      * @param target
      */
-    public static text (text: string, options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
-        options = options || {};
-        options.text = text || options?.text;
+    public static text (text: string, target?: JQuery<HTMLElement>) {
         target = target || $(document.body);
-        target.LoadingOverlay('text', options);
+        target.LoadingOverlay('text', text as any);
     }
 }
