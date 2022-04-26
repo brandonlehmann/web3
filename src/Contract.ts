@@ -101,6 +101,20 @@ export default class Contract extends ethers.Contract implements IContractType {
     }
 
     /**
+     * Returns the connected provider/signer
+     */
+    public get connected (): ethers.Signer | ethers.providers.Provider {
+        return this.signer || this.provider;
+    }
+
+    /**
+     * Returns if the contract is connected to a signer
+     */
+    public get isSignerConnected (): boolean {
+        return this.connected instanceof ethers.Signer;
+    }
+
+    /**
      * Automatically keeps trying the call unless we get a revert exception
      *
      * @param func
