@@ -110,7 +110,7 @@ export default class Web3Controller extends EventEmitter {
      * Returns the signer if available
      */
     public get signer (): ethers.Signer | undefined {
-        return this.web3Provider?.getSigner();
+        return this.wallet || this.web3Provider?.getSigner();
     }
 
     /**
@@ -142,6 +142,17 @@ export default class Web3Controller extends EventEmitter {
      */
     private get web3Provider (): ethers.providers.Web3Provider | undefined {
         return this._web3Provider;
+    }
+
+    private _wallet?: ethers.Wallet;
+
+    /**
+     * Returns a wallet interface if connected
+     *
+     * @private
+     */
+    private get wallet (): ethers.Wallet | undefined {
+        return this._wallet;
     }
 
     /**
@@ -194,7 +205,7 @@ export default class Web3Controller extends EventEmitter {
             provider = new ethers.providers.JsonRpcProvider(chain.rpc[0], options.chainId);
         }
 
-        const instance = new Web3Controller(
+        Web3ControllerSingleton = new Web3Controller(
             appName,
             options.chainId,
             options.providerOptions,
@@ -203,9 +214,7 @@ export default class Web3Controller extends EventEmitter {
             provider
         );
 
-        Web3ControllerSingleton = instance;
-
-        return instance;
+        return Web3ControllerSingleton;
     }
 
     /**
@@ -274,7 +283,22 @@ export default class Web3Controller extends EventEmitter {
             throw new Error('Signer is not connected');
         }
 
-        return this.signer?.signMessage(message);
+        return this.signer.signMessage(message);
+    }
+
+    /**
+     * Connects a wallet directly to the controller
+     *
+     * @param wallet
+     */
+    public async connectWallet (wallet: ethers.Wallet) {
+        if (wallet.provider) {
+            this._wallet = wallet;
+        } else {
+            this._wallet = wallet.connect(this.provider);
+        }
+
+        this.emit('connect', (await this._wallet.provider.getNetwork()).chainId);
     }
 
     /**
@@ -329,6 +353,8 @@ export default class Web3Controller extends EventEmitter {
                 this._checkTimer.paused = false;
             }
         });
+
+        this.emit('connect', await this.signer.getChainId());
     }
 
     /**
@@ -347,6 +373,10 @@ export default class Web3Controller extends EventEmitter {
             if ((!this._cacheProvider || clearCacheProvider) && this.modal.clearCachedProvider) {
                 this.modal.clearCachedProvider();
             }
+        }
+
+        if (this.wallet) {
+            this._wallet = undefined;
         }
 
         if (this.defaultProvider instanceof ethers.providers.WebSocketProvider) {
