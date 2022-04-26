@@ -459,11 +459,10 @@ export default class Web3Controller extends EventEmitter {
         // try to activate a multicall provider if it isn't already one
         try {
             if (!(options.provider instanceof MulticallProvider)) {
-                if (options.provider instanceof ethers.providers.Provider) {
+                if (options.provider instanceof ethers.Signer) {
                     options.provider = await MulticallProvider.create(options.provider);
                 } else if (options.provider) {
-                    options.provider = await MulticallProvider.create(
-                        options.provider.provider || this.provider);
+                    options.provider = await MulticallProvider.create(options.provider);
                 }
             }
         } catch {

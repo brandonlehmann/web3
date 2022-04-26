@@ -44,7 +44,7 @@ export default class MulticallProvider {
      * @protected
      */
     protected constructor (
-        public readonly provider: ethers.providers.Provider,
+        public readonly provider: ethers.Signer | ethers.providers.Provider,
         public readonly chainId: number,
         multicallAddress?: string
     ) {
@@ -70,13 +70,17 @@ export default class MulticallProvider {
      * @param options
      */
     public static async create (
-        provider: ethers.providers.Provider,
+        provider: ethers.Signer | ethers.providers.Provider,
         options?: IMulticallProviderOptions
     ): Promise<MulticallProvider> {
         options = options || {};
 
-        if (!options.chainId) {
+        if (!options.chainId && provider instanceof ethers.Signer) {
+            options.chainId = await provider.getChainId();
+        } else if (!options.chainId && provider instanceof ethers.providers.Provider) {
             options.chainId = (await provider.getNetwork()).chainId;
+        } else if (!options.chainId) {
+            throw new Error('Cannot determine chain ID for multicall provider');
         }
 
         return new MulticallProvider(provider, options.chainId, options.multicallAddress);
