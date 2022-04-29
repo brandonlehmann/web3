@@ -1,6 +1,6 @@
 {
   "name": "@brandonlehmann/web3",
-  "version": "3.0.12",
+  "version": "3.0.13",
   "description": "A web3 helper library for managing provider connections, contracts, and web3 providers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -45,6 +45,7 @@
   },
   "dependencies": {
     "@babel/core": "^7.17.9",
+    "@coinbase/wallet-sdk": "^3.0.11",
     "@popperjs/core": "^2.11.5",
     "@types/bootstrap": "^5.1.9",
     "@types/jquery": "^3.5.14",
@@ -78,8 +79,7 @@
     "stream-http": "^3.2.0",
     "style-loader": "^3.3.1",
     "url": "^0.11.0",
-    "walletlink": "^2.5.0",
     "web3": "^1.7.3",
-    "web3modal": "^1.9.6"
+    "web3modal": "^1.9.7"
   }
 }

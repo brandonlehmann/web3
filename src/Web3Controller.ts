@@ -38,7 +38,7 @@ import Contract, { IContractCall } from './Contract';
 import * as ls from 'local-storage';
 import { sleep } from './Tools';
 import ERC20 from './ERC20';
-import { JSONRPCMethod } from 'walletlink/dist/provider/JSONRPC';
+import { JSONRPCMethod } from '@coinbase/wallet-sdk/dist/provider/JSONRPC';
 
 /** @ignore */
 let Web3ControllerSingleton: any | undefined;

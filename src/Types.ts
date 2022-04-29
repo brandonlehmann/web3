@@ -20,7 +20,7 @@
 
 import { connectors, IProviderOptions } from 'web3modal';
 import WalletConnectProvider from '@walletconnect/web3-provider';
-import { WalletLink } from 'walletlink/dist/WalletLink';
+import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk/dist/CoinbaseWalletSDK';
 import { ethers } from 'ethers';
 import MulticallProvider from './MulticallProvider';
 
@@ -125,7 +125,7 @@ export const DefaultProviderOptions: IProviderOptions = {
         }
     },
     'custom-walletlink': {
-        package: WalletLink,
+        package: CoinbaseWalletSDK,
         display: {
             logo: 'https://raw.githubusercontent.com/Web3Modal/web3modal/master/src/providers/logos/coinbase.svg',
             name: 'Coinbase Wallet',
@@ -139,7 +139,7 @@ export const DefaultProviderOptions: IProviderOptions = {
         connector: async (_, options) => {
             const { appName, rpc, chainId } = options;
 
-            const instance = new WalletLink({
+            const instance = new CoinbaseWalletSDK({
                 appName
             });
 
