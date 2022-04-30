@@ -83,6 +83,11 @@ export default class Overlay {
      * @param target
      */
     public static hide (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        options = options || {};
+        options.zIndex ||= 2147483646;
+        if (options.zIndex === Number.MAX_SAFE_INTEGER) {
+            options.zIndex = Number.MAX_SAFE_INTEGER - 1;
+        }
         target ||= $(document.body);
         target.LoadingOverlay('hide', options);
     }
@@ -94,6 +99,11 @@ export default class Overlay {
      * @param target
      */
     public static progress (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        options = options || {};
+        options.zIndex ||= 2147483646;
+        if (options.zIndex === Number.MAX_SAFE_INTEGER) {
+            options.zIndex = Number.MAX_SAFE_INTEGER - 1;
+        }
         target ||= $(document.body);
         target.LoadingOverlay('progress', options);
     }
@@ -105,6 +115,11 @@ export default class Overlay {
      * @param target
      */
     public static resize (options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
+        options = options || {};
+        options.zIndex ||= 2147483646;
+        if (options.zIndex === Number.MAX_SAFE_INTEGER) {
+            options.zIndex = Number.MAX_SAFE_INTEGER - 1;
+        }
         target ||= $(document.body);
         target.LoadingOverlay('resize', options);
     }
@@ -119,6 +134,10 @@ export default class Overlay {
     public static show (text: string, options?: ILoadingOverlayOptions, target?: JQuery<HTMLElement>) {
         options = options || {};
         options.text = text;
+        options.zIndex ||= 2147483646;
+        if (options.zIndex === Number.MAX_SAFE_INTEGER) {
+            options.zIndex = Number.MAX_SAFE_INTEGER - 1;
+        }
         target = target || $(document.body);
         target.LoadingOverlay('show', options);
     }
