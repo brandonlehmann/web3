@@ -35,7 +35,7 @@ import Web3Modal, { IProviderOptions } from 'web3modal';
 import MulticallProvider from './MulticallProvider';
 import Metronome from 'node-metronome';
 import Contract, { IContractCall } from './Contract';
-import * as ls from 'local-storage';
+import StorageWrapper from './StorageWrapper';
 import { sleep } from './Tools';
 import ERC20 from './ERC20';
 import { JSONRPCMethod } from '@coinbase/wallet-sdk/dist/provider/JSONRPC';
@@ -424,11 +424,16 @@ export default class Web3Controller extends EventEmitter {
         options ||= {};
         options.chainId ||= await this.chainId();
         options.force_refresh ||= false;
+        contract_address = contract_address.trim();
+
+        if (!ethers.utils.isAddress(contract_address)) {
+            throw new Error('Contract address is not a valid address');
+        }
 
         const cacheId = options.chainId + '_' + contract_address;
 
         if (!options.force_refresh) {
-            const abi = ls.get<string>(cacheId);
+            const abi = StorageWrapper.get<string>(cacheId);
 
             if (abi && abi.length !== 0) {
                 return abi;
@@ -455,7 +460,7 @@ export default class Web3Controller extends EventEmitter {
         const json = await response.json();
 
         if (json.result && json.status === '1') {
-            ls.set(cacheId, json.result);
+            StorageWrapper.set(cacheId, json.result);
 
             return json.result;
         }
@@ -481,6 +486,11 @@ export default class Web3Controller extends EventEmitter {
         options.chainId ||= await this.chainId();
         options.force_refresh ||= false;
         options.provider ||= this.signer || this.provider;
+        contract_address = contract_address.trim();
+
+        if (!ethers.utils.isAddress(contract_address)) {
+            throw new Error('Contract address is not a valid address');
+        }
 
         if (!contract_abi) {
             contract_abi = await this.fetchABI(contract_address, options);

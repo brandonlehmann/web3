@@ -37,8 +37,8 @@ import { BigNumber, ethers } from 'ethers';
 import Metronome from 'node-metronome';
 import numeral from 'numeral';
 import fetch, { Headers, Request, Response } from 'cross-fetch';
-import * as localStorage from 'local-storage';
 import * as dotenv from 'dotenv';
+import localStorage from './StorageWrapper';
 
 export {
     ABI,

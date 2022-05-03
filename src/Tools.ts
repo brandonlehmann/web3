@@ -27,6 +27,11 @@ import { NFTAssetType } from './Types';
 export const sleep = async (timeout: number) =>
     new Promise(resolve => setTimeout(resolve, timeout * 1000));
 
+/**
+ * Attempts to determine the asset type found inside an ERC721 or ERC1155
+ *
+ * @param filename
+ */
 export const detectAssetType = (filename?: string): NFTAssetType => {
     if (!filename) return NFTAssetType.UNKNOWN;
     filename = filename.toLowerCase();

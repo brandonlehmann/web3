@@ -173,3 +173,4 @@ contractCache/
 bin/
 dist/
 test/
+localstorage/
