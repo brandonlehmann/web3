@@ -25,6 +25,7 @@ import { MaxApproval } from './ERC20';
 import { IContractCall } from './Contract';
 import { NFTAssetType } from './Types';
 import { detectAssetType } from './Tools';
+import { IERC721Attribute } from './ERC721';
 
 /**
  * Represents an ERC1155 attribute in the metadata
@@ -37,14 +38,21 @@ export interface IERC1155Properties {
  * Represents the metadata of an ERC1155 token
  */
 export interface IERC1155Metadata {
-    tokenId: BigNumber;
-    type: NFTAssetType;
-    contract: string;
     name: string;
     decimals?: number;
     description: string;
     image?: string;
     properties?: IERC1155Properties;
+    attributes?: IERC721Attribute[];
+}
+
+/**
+ * Represents fetched metadata of an ERC1155 token
+ */
+export interface IERC1155FetchedMetadata extends IERC1155Metadata {
+    tokenId: BigNumber;
+    type: NFTAssetType;
+    contract: string;
 }
 
 /**
@@ -202,7 +210,7 @@ export default class ERC1155 extends BaseContract {
      *
      * @param id
      */
-    public async metadata (id: ethers.BigNumberish): Promise<IERC1155Metadata> {
+    public async metadata (id: ethers.BigNumberish): Promise<IERC1155FetchedMetadata> {
         const uri = await this.uri(id);
 
         const response = await fetch(uri);
@@ -211,7 +219,7 @@ export default class ERC1155 extends BaseContract {
             throw new Error('Error fetching metadata JSON');
         }
 
-        const json: IERC1155Metadata = await response.json();
+        const json: IERC1155FetchedMetadata = await response.json();
 
         if (json.image) {
             json.image = json.image.replace('ipfs://', this.IPFSGateway);
@@ -415,7 +423,7 @@ export default class ERC1155 extends BaseContract {
      *
      * @param id
      */
-    public async uri (id: ethers.BigNumberish): Promise<any> {
+    public async uri (id: ethers.BigNumberish): Promise<string> {
         const uri = await this.retryCall<string>(this.contract.uri, id);
 
         return uri.replace('ipfs://', this.IPFSGateway);
@@ -427,8 +435,10 @@ export default class ERC1155 extends BaseContract {
      * @param tokens
      * @protected
      */
-    protected async metadataBulk (tokens: { id: ethers.BigNumberish, uri: string }[]): Promise<IERC1155Metadata[]> {
-        const result: IERC1155Metadata[] = [];
+    protected async metadataBulk (
+        tokens: { id: ethers.BigNumberish, uri: string }[]
+    ): Promise<IERC1155FetchedMetadata[]> {
+        const result: IERC1155FetchedMetadata[] = [];
 
         const promises = [];
 
@@ -453,7 +463,7 @@ export default class ERC1155 extends BaseContract {
                 throw new Error('Error fetching metadata');
             }
 
-            const json: IERC1155Metadata = await r.response.json();
+            const json: IERC1155FetchedMetadata = await r.response.json();
             if (json.image) {
                 json.image = json.image.replace('ipfs://', this.IPFSGateway);
             }

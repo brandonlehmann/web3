@@ -42,9 +42,6 @@ export interface IERC721Attribute {
  * Represents the metadata of an ERC721 token
  */
 export interface IERC721Metadata {
-    tokenId: BigNumber;
-    type: NFTAssetType,
-    contract: string;
     name: string;
     description: string;
     image: string;
@@ -66,6 +63,15 @@ export interface IERC721Metadata {
             rank: number;
         }
     }
+}
+
+/**
+ * Represents the fetched metadata of an ERC721 token
+ */
+export interface IERC721FetchedMetadata extends IERC721Metadata {
+    tokenId: BigNumber;
+    type: NFTAssetType,
+    contract: string;
 }
 
 /**
@@ -176,7 +182,7 @@ export default class ERC721 extends BaseContract {
      *
      * @param tokenId
      */
-    public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721Metadata> {
+    public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721FetchedMetadata> {
         const uri = await this.tokenURI(tokenId);
 
         const response = await fetch(uri);
@@ -185,7 +191,7 @@ export default class ERC721 extends BaseContract {
             throw new Error('Error fetching metadata JSON');
         }
 
-        const json: IERC721Metadata = await response.json();
+        const json: IERC721FetchedMetadata = await response.json();
 
         json.image = json.image.replace('ipfs://', this.IPFSGateway);
         json.tokenId = (tokenId as BigNumber);
@@ -206,7 +212,7 @@ export default class ERC721 extends BaseContract {
      *
      * @param owner
      */
-    public async ownedMetadata (owner: string): Promise<IERC721Metadata[]> {
+    public async ownedMetadata (owner: string): Promise<IERC721FetchedMetadata[]> {
         const tokenIds = await this.ownedTokenIds(owner);
 
         if (this.contract.multicallProvider) {
@@ -436,8 +442,10 @@ export default class ERC721 extends BaseContract {
      * @param tokens
      * @protected
      */
-    protected async metadataBulk (tokens: { id: ethers.BigNumberish, uri: string }[]): Promise<IERC721Metadata[]> {
-        const result: IERC721Metadata[] = [];
+    protected async metadataBulk (
+        tokens: { id: ethers.BigNumberish, uri: string }[]
+    ): Promise<IERC721FetchedMetadata[]> {
+        const result: IERC721FetchedMetadata[] = [];
 
         const promises = [];
 
@@ -462,7 +470,7 @@ export default class ERC721 extends BaseContract {
                 throw new Error('Error fetching metadata');
             }
 
-            const json: IERC721Metadata = await r.response.json();
+            const json: IERC721FetchedMetadata = await r.response.json();
             json.type = detectAssetType(json.image);
             json.image = json.image.replace('ipfs://', this.IPFSGateway);
             json.tokenId = (r.id as BigNumber);
