@@ -20,10 +20,10 @@
 
 import { BigNumber, ethers } from 'ethers';
 import { IContractCall } from './Contract';
-import fetch, { Response } from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
 import { NFTAssetType } from './Types';
 import { detectAssetType } from './Tools';
+import IPFSGatewayHelper from './IPFSGatewayHelper';
 
 /**
  * Represents an ERC721 attribute in the metadata
@@ -88,9 +88,15 @@ export default class ERC721 extends BaseContract {
      */
     constructor (
         _contract: IContract,
-        public IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
+        IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
     ) {
         super(_contract);
+
+        IPFSGatewayHelper.registerGateway(IPFSGateway);
+    }
+
+    public get IPFSGateway (): string {
+        return IPFSGatewayHelper.gateway;
     }
 
     /**
@@ -185,13 +191,7 @@ export default class ERC721 extends BaseContract {
     public async metadata (tokenId: ethers.BigNumberish): Promise<IERC721FetchedMetadata> {
         const uri = await this.tokenURI(tokenId);
 
-        const response = await fetch(uri);
-
-        if (!response.ok) {
-            throw new Error('Error fetching metadata JSON');
-        }
-
-        const json: IERC721FetchedMetadata = await response.json();
+        const json: IERC721FetchedMetadata = await IPFSGatewayHelper.fetch<IERC721FetchedMetadata>(uri);
 
         json.image = json.image.replace('ipfs://', this.IPFSGateway);
         json.tokenId = (tokenId as BigNumber);
@@ -452,10 +452,10 @@ export default class ERC721 extends BaseContract {
         const get = async (token: {
             id: ethers.BigNumberish,
             uri: string
-        }): Promise<{ id: ethers.BigNumberish, response: Response }> => {
+        }): Promise<{ id: ethers.BigNumberish, json: IERC721FetchedMetadata }> => {
             return {
                 id: token.id,
-                response: await fetch(token.uri)
+                json: await IPFSGatewayHelper.fetch<IERC721FetchedMetadata>(token.uri)
             };
         };
 
@@ -466,11 +466,7 @@ export default class ERC721 extends BaseContract {
         const results = await Promise.all(promises);
 
         for (const r of results) {
-            if (!r.response.ok) {
-                throw new Error('Error fetching metadata');
-            }
-
-            const json: IERC721FetchedMetadata = await r.response.json();
+            const { json } = r;
             json.type = detectAssetType(json.image);
             json.image = json.image.replace('ipfs://', this.IPFSGateway);
             json.tokenId = (r.id as BigNumber);

@@ -19,13 +19,14 @@
 // SOFTWARE.
 
 import { BigNumber, ethers } from 'ethers';
-import fetch, { Response } from 'cross-fetch';
 import BaseContract, { IContract } from './BaseContract';
 import { MaxApproval } from './ERC20';
 import { IContractCall } from './Contract';
 import { NFTAssetType } from './Types';
 import { detectAssetType } from './Tools';
 import { IERC721Attribute } from './ERC721';
+import StorageWrapper from './StorageWrapper';
+import IPFSGatewayHelper from './IPFSGatewayHelper';
 
 /**
  * Represents an ERC1155 attribute in the metadata
@@ -63,11 +64,35 @@ export interface IERC1155FetchedMetadata extends IERC1155Metadata {
 export default class ERC1155 extends BaseContract {
     private _maximumID: BigNumber = BigNumber.from(0);
 
+    /**
+     * Constructs a new instance of the contract
+     *
+     * @param _contract
+     * @param IPFSGateway
+     * @param maximumId
+     */
     constructor (
         _contract: IContract,
-        public IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/'
+        IPFSGateway = 'https://cloudflare-ipfs.com/ipfs/',
+        maximumId?: ethers.BigNumberish
     ) {
         super(_contract);
+
+        IPFSGatewayHelper.registerGateway(IPFSGateway);
+
+        if (maximumId) {
+            this._maximumID = BigNumber.from(maximumId);
+        } else {
+            const value = StorageWrapper.get<string>(`${this.address}-maximumId`);
+
+            if (value) {
+                this._maximumID = BigNumber.from(value);
+            }
+        }
+    }
+
+    public get IPFSGateway (): string {
+        return IPFSGatewayHelper.gateway;
     }
 
     /**
@@ -142,14 +167,14 @@ export default class ERC1155 extends BaseContract {
      *
      * Note: We loop in here until we get a revert... thus we cannot reasonably account for any burn
      * mechanics if the URI for a burned ID is destroyed by the contract
-     *
-     * @param possibleMaxId
      */
-    public async discoverMaximumId (
-        possibleMaxId: ethers.BigNumberish = MaxApproval
-    ): Promise<BigNumber> {
+    public async discoverMaximumId (): Promise<BigNumber> {
         try {
-            return await this.maximumID();
+            this._maximumID = await this.maximumID();
+
+            StorageWrapper.set<string>(`${this.address}-maximumId`, this._maximumID.toString());
+
+            return this._maximumID;
         } catch {
             if (this._maximumID.isZero()) {
                 try {
@@ -164,7 +189,7 @@ export default class ERC1155 extends BaseContract {
             }
 
             for (let i = this._maximumID;
-                i.lt(possibleMaxId);
+                i.lt(MaxApproval);
                 i = i.add(1)) {
                 try {
                     await this.uri(i);
@@ -174,6 +199,8 @@ export default class ERC1155 extends BaseContract {
                     break;
                 }
             }
+
+            StorageWrapper.set<string>(`${this.address}-maximumId`, this._maximumID.toString());
 
             return this._maximumID;
         }
@@ -185,7 +212,17 @@ export default class ERC1155 extends BaseContract {
      * @param id
      */
     public async exists (id: ethers.BigNumberish): Promise<boolean> {
-        return this.retryCall<boolean>(this.contract.exists, id);
+        if (typeof this.contract.exists === 'function') {
+            return this.retryCall<boolean>(this.contract.exists, id);
+        }
+
+        try {
+            await this.uri(id);
+
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     /**
@@ -213,13 +250,7 @@ export default class ERC1155 extends BaseContract {
     public async metadata (id: ethers.BigNumberish): Promise<IERC1155FetchedMetadata> {
         const uri = await this.uri(id);
 
-        const response = await fetch(uri);
-
-        if (!response.ok) {
-            throw new Error('Error fetching metadata JSON');
-        }
-
-        const json: IERC1155FetchedMetadata = await response.json();
+        const json: IERC1155FetchedMetadata = await IPFSGatewayHelper.fetch<IERC1155FetchedMetadata>(uri);
 
         if (json.image) {
             json.image = json.image.replace('ipfs://', this.IPFSGateway);
@@ -243,15 +274,11 @@ export default class ERC1155 extends BaseContract {
      * scanning through the range of IDs provided
      *
      * @param owner
-     * @param startId
-     * @param endId
      */
     public async ownedMetadata (
-        owner: string,
-        startId: ethers.BigNumberish = BigNumber.from(1),
-        endId: ethers.BigNumberish = this._maximumID
+        owner: string
     ): Promise<IERC1155Metadata[]> {
-        const tokenIds = await this.ownedTokenIds(owner, startId, endId);
+        const tokenIds = await this.ownedTokenIds(owner);
 
         if (this.contract.multicallProvider) {
             const uriRequests: {id: ethers.BigNumberish, uri: string}[] = [];
@@ -291,21 +318,21 @@ export default class ERC1155 extends BaseContract {
      * scanning through the range of IDs provided
      *
      * @param owner
-     * @param startId
-     * @param endId
      */
     public async ownedTokenIds (
-        owner: string,
-        startId: ethers.BigNumberish = BigNumber.from(1),
-        endId: ethers.BigNumberish = this._maximumID
+        owner: string
     ): Promise<BigNumber[]> {
+        await this.discoverMaximumId();
+
         const results: BigNumber[] = [];
+
+        const startId = (await this.exists(0)) ? BigNumber.from(0) : BigNumber.from(1);
 
         if (this.contract.multicallProvider) {
             const calls: IContractCall[] = [];
 
             for (let tokenId = BigNumber.from(startId);
-                tokenId.lte(BigNumber.from(endId));
+                tokenId.lte(BigNumber.from(this._maximumID));
                 tokenId = tokenId.add(1)) {
                 calls.push(this.call('balanceOf', owner, tokenId));
             }
@@ -314,12 +341,12 @@ export default class ERC1155 extends BaseContract {
 
             for (let i = 0; i < response.length; i++) {
                 if (!response[i].isZero()) {
-                    response.push(BigNumber.from(BigNumber.from(startId).add(i)));
+                    results.push(BigNumber.from(BigNumber.from(startId).add(i)));
                 }
             }
         } else {
             for (let tokenId = BigNumber.from(startId);
-                tokenId.lte(BigNumber.from(endId));
+                tokenId.lte(BigNumber.from(this._maximumID));
                 tokenId = tokenId.add(1)) {
                 if (!(await this.balanceOf(owner, tokenId)).isZero()) {
                     results.push(tokenId);
@@ -445,10 +472,10 @@ export default class ERC1155 extends BaseContract {
         const get = async (token: {
             id: ethers.BigNumberish,
             uri: string
-        }): Promise<{ id: ethers.BigNumberish, response: Response }> => {
+        }): Promise<{ id: ethers.BigNumberish, json: IERC1155FetchedMetadata }> => {
             return {
                 id: token.id,
-                response: await fetch(token.uri)
+                json: await IPFSGatewayHelper.fetch<IERC1155FetchedMetadata>(token.uri)
             };
         };
 
@@ -459,11 +486,7 @@ export default class ERC1155 extends BaseContract {
         const results = await Promise.all(promises);
 
         for (const r of results) {
-            if (!r.response.ok) {
-                throw new Error('Error fetching metadata');
-            }
-
-            const json: IERC1155FetchedMetadata = await r.response.json();
+            const { json } = r;
             if (json.image) {
                 json.image = json.image.replace('ipfs://', this.IPFSGateway);
             }

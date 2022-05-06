@@ -121,6 +121,10 @@ export default class Contract extends ethers.Contract implements IContractType {
      * @param params
      */
     public async retryCall<T> (func: (...args: any[]) => Promise<T>, ...params: any[]): Promise<T> {
+        if (typeof func !== 'function') {
+            throw new Error('Contract method does not exist');
+        }
+
         try {
             return func(...params);
         } catch (error: any) {
