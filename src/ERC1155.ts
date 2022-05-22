@@ -388,15 +388,17 @@ export default class ERC1155 extends BaseContract {
      * @param ids
      * @param values
      * @param data
+     * @param overrides
      */
     public async safeBatchTransferFrom (
         from: string,
         to: string,
         ids: ethers.BigNumberish[],
         values: ethers.BigNumberish[],
-        data: string
+        data: string,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.safeBatchTransferFrom(from, to, ids, values, data);
+        return this.contract.safeBatchTransferFrom(from, to, ids, values, data, overrides);
     }
 
     /**
@@ -407,15 +409,17 @@ export default class ERC1155 extends BaseContract {
      * @param id
      * @param value
      * @param data
+     * @param overrides
      */
     public async safeTransferFrom (
         from: string,
         to: string,
         id: ethers.BigNumberish,
         value: ethers.BigNumberish,
-        data: string
+        data: string,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.safeTransferFrom(from, to, id, value, data);
+        return this.contract.safeTransferFrom(from, to, id, value, data, overrides);
     }
 
     /**
@@ -423,9 +427,14 @@ export default class ERC1155 extends BaseContract {
      *
      * @param operator
      * @param approved
+     * @param overrides
      */
-    public async setApprovalForAll (operator: string, approved = true): Promise<ethers.ContractTransaction> {
-        return this.contract.setApprovalForAll(operator, approved);
+    public async setApprovalForAll (
+        operator: string,
+        approved = true,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.setApprovalForAll(operator, approved, overrides);
     }
 
     /**

@@ -104,12 +104,14 @@ export default class ERC721 extends BaseContract {
      *
      * @param approved
      * @param tokenId
+     * @param overrides
      */
     public async approve (
         approved: string,
-        tokenId: ethers.BigNumberish
+        tokenId: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.approve(approved, tokenId);
+        return this.contract.approve(approved, tokenId, overrides);
     }
 
     /**
@@ -314,17 +316,19 @@ export default class ERC721 extends BaseContract {
      * @param to
      * @param tokenId
      * @param data
+     * @param overrides
      */
     public async safeTransferFrom (
         from: string,
         to: string,
         tokenId: ethers.BigNumberish,
-        data?: string
+        data?: string,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
         if (data) {
-            return this.contract['safeTransferFrom(address,address,uint256,bytes)'](from, to, tokenId, data);
+            return this.contract['safeTransferFrom(address,address,uint256,bytes)'](from, to, tokenId, data, overrides);
         } else {
-            return this.contract['safeTransferFrom(address,address,uint256)'](from, to, tokenId);
+            return this.contract['safeTransferFrom(address,address,uint256)'](from, to, tokenId, overrides);
         }
     }
 
@@ -334,12 +338,14 @@ export default class ERC721 extends BaseContract {
      *
      * @param operator
      * @param approved
+     * @param overrides
      */
     public async setApprovalForAll (
         operator: string,
-        approved = true
+        approved = true,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.setApprovalForAll(operator, approved);
+        return this.contract.setApprovalForAll(operator, approved, overrides);
     }
 
     /**
@@ -427,13 +433,15 @@ export default class ERC721 extends BaseContract {
      * @param from
      * @param to
      * @param tokenId
+     * @param overrides
      */
     public async transferFrom (
         from: string,
         to: string,
-        tokenId: ethers.BigNumberish
+        tokenId: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.transferFrom(from, to, tokenId);
+        return this.contract.transferFrom(from, to, tokenId, overrides);
     }
 
     /**

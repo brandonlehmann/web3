@@ -44,21 +44,27 @@ export default class ERC777 extends BaseContract {
      *
      * @param spender
      * @param value
+     * @param overrides
      */
     public async approve (
         spender: string,
-        value: ethers.BigNumberish = MaxApproval
+        value: ethers.BigNumberish = MaxApproval,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.approve(spender, value);
+        return this.contract.approve(spender, value, overrides);
     }
 
     /**
      * Set a third party operator address as an operator of msg.sender to send and burn tokens on its behalf.
      *
      * @param operator
+     * @param overrides
      */
-    public async authorizeOperator (operator: string): Promise<ethers.ContractTransaction> {
-        return this.contract.authorizeOperator(operator);
+    public async authorizeOperator (
+        operator: string,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.authorizeOperator(operator, overrides);
     }
 
     /**
@@ -118,9 +124,14 @@ export default class ERC777 extends BaseContract {
      *
      * @param amount
      * @param data
+     * @param overrides
      */
-    public async burn (amount: ethers.BigNumberish, data: string): Promise<ethers.ContractTransaction> {
-        return this.contract.burn(amount, data);
+    public async burn (
+        amount: ethers.BigNumberish,
+        data: string,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.burn(amount, data, overrides);
     }
 
     /**
@@ -172,13 +183,16 @@ export default class ERC777 extends BaseContract {
      * @param amount
      * @param data
      * @param operatorData
+     * @param overrides
      */
     public async operatorBurn (
         from: string,
         amount: ethers.BigNumberish,
         data: string,
-        operatorData: string): Promise<ethers.ContractTransaction> {
-        return this.contract.operatorBurn(from, amount, data, operatorData);
+        operatorData: string,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.operatorBurn(from, amount, data, operatorData, overrides);
     }
 
     /**
@@ -192,15 +206,17 @@ export default class ERC777 extends BaseContract {
      * @param amount
      * @param data
      * @param operatorData
+     * @param overrides
      */
     public async operatorSend (
         from: string,
         to: string,
         amount: ethers.BigNumberish,
         data: string,
-        operatorData: string
+        operatorData: string,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.operatorSend(from, to, amount, data, operatorData);
+        return this.contract.operatorSend(from, to, amount, data, operatorData, overrides);
     }
 
     /**
@@ -208,9 +224,13 @@ export default class ERC777 extends BaseContract {
      * and to send and burn tokens on its behalf.
      *
      * @param operator
+     * @param overrides
      */
-    public async revokeOperator (operator: string): Promise<ethers.ContractTransaction> {
-        return this.contract.revokeOperator(operator);
+    public async revokeOperator (
+        operator: string,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.revokeOperator(operator, overrides);
     }
 
     /**
@@ -219,9 +239,15 @@ export default class ERC777 extends BaseContract {
      * @param to
      * @param amount
      * @param data
+     * @param overrides
      */
-    public async send (to: string, amount: ethers.BigNumberish, data: string): Promise<ethers.ContractTransaction> {
-        return this.contract.send(to, amount, data);
+    public async send (
+        to: string,
+        amount: ethers.BigNumberish,
+        data: string,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.send(to, amount, data, overrides);
     }
 
     /**
@@ -278,9 +304,14 @@ export default class ERC777 extends BaseContract {
      *
      * @param to
      * @param value
+     * @param overrides
      */
-    public async transfer (to: string, value: ethers.BigNumberish): Promise<ethers.ContractTransaction> {
-        return this.contract.transfer(to, value);
+    public async transfer (
+        to: string,
+        value: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.transfer(to, value, overrides);
     }
 
     /**
@@ -289,12 +320,14 @@ export default class ERC777 extends BaseContract {
      * @param from
      * @param to
      * @param value
+     * @param overrides
      */
     public async transferFrom (
         from: string,
         to: string,
-        value: ethers.BigNumberish
+        value: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.transferFrom(from, to, value);
+        return this.contract.transferFrom(from, to, value, overrides);
     }
 }

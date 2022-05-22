@@ -49,12 +49,14 @@ export default class ERC20 extends BaseContract {
      *
      * @param spender
      * @param value
+     * @param overrides
      */
     public async approve (
         spender: string,
-        value: ethers.BigNumberish = MaxApproval
+        value: ethers.BigNumberish = MaxApproval,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.approve(spender, value);
+        return this.contract.approve(spender, value, overrides);
     }
 
     /**
@@ -178,9 +180,14 @@ export default class ERC20 extends BaseContract {
      *
      * @param to
      * @param value
+     * @param overrides
      */
-    public async transfer (to: string, value: ethers.BigNumberish): Promise<ethers.ContractTransaction> {
-        return this.contract.transfer(to, value);
+    public async transfer (
+        to: string,
+        value: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
+    ): Promise<ethers.ContractTransaction> {
+        return this.contract.transfer(to, value, overrides);
     }
 
     /**
@@ -189,12 +196,14 @@ export default class ERC20 extends BaseContract {
      * @param from
      * @param to
      * @param value
+     * @param overrides
      */
     public async transferFrom (
         from: string,
         to: string,
-        value: ethers.BigNumberish
+        value: ethers.BigNumberish,
+        overrides: ethers.CallOverrides = {}
     ): Promise<ethers.ContractTransaction> {
-        return this.contract.transferFrom(from, to, value);
+        return this.contract.transferFrom(from, to, value, overrides);
     }
 }
