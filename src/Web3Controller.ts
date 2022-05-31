@@ -65,16 +65,12 @@ export default class Web3Controller extends EventEmitter {
         super();
 
         for (const [, chain] of this._chainList) {
-            if (chain.chainId !== this._requestedChainId) {
-                continue;
-            }
-
             if (chain.rpc.length !== 0) {
                 if (this._providerOptions.walletconnect) {
                     this._providerOptions.walletconnect.options.rpc[chain.chainId] = chain.rpc[0];
                 }
 
-                if (this._providerOptions['custom-walletlink']) {
+                if (this._providerOptions['custom-walletlink'] && chain.chainId === this._requestedChainId) {
                     this._providerOptions['custom-walletlink'].options.rpc = chain.rpc[0];
                     this._providerOptions['custom-walletlink'].options.chainId = chain.chainId;
                     this._providerOptions['custom-walletlink'].options.appName = this._appName;
@@ -354,7 +350,27 @@ export default class Web3Controller extends EventEmitter {
             }
         });
 
-        this.emit('connect', await this.signer.getChainId());
+        let chainId = 0;
+
+        while (chainId === 0) {
+            try {
+                chainId = await this.signer.getChainId();
+            } catch (error: any) {
+                /**
+                 * some web3 providers like to leak an "error" out if the underlying network changed
+                 * and we haven't handled it via their "special" methods before making any calls
+                 * via the provider. Given that we want to emit the connect event with the chain id
+                 * before this method returns, we need to handle their "error"
+                 */
+                if (!error.toString().toLowerCase().includes('underlying network changed')) {
+                    throw error;
+                }
+
+                await sleep(0.5);
+            }
+        }
+
+        this.emit('connect', chainId);
     }
 
     /**
