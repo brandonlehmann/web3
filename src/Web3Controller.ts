@@ -53,6 +53,7 @@ export default class Web3Controller extends EventEmitter {
     private readonly modal?: Web3Modal;
     private _checkTimer?: Metronome;
     private _instance?: any;
+    private _switchedChain?: number;
 
     private constructor (
         private readonly _appName: string,
@@ -336,13 +337,21 @@ export default class Web3Controller extends EventEmitter {
                 return;
             }
 
+            const networks = [
+                this._requestedChainId
+            ];
+
+            if (this._switchedChain) {
+                networks.push(this._switchedChain);
+            }
+
             try {
                 this._checkTimer.paused = true;
 
                 if (!this.signer || (await this.signer.getAddress()).length === 0) {
                     return this.disconnect(-1, 'Signer not connected');
-                } else if (forceNetwork && (await this.signer.getChainId()) !== this._requestedChainId) {
-                    await this.switchChain(this._requestedChainId);
+                } else if (forceNetwork && !networks.includes(await this.signer.getChainId())) {
+                    await this.switchChain(this._switchedChain || this._requestedChainId);
                 }
             } catch {
             } finally {
@@ -593,6 +602,13 @@ export default class Web3Controller extends EventEmitter {
             }
 
             throw error;
+        }
+
+        // update the requested chain ID so that we don't prompt to go back to the other one
+        if (chainId !== this._requestedChainId) {
+            this._switchedChain = chainId;
+        } else {
+            delete this._switchedChain;
         }
     }
 
