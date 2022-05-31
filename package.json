@@ -1,6 +1,6 @@
 {
   "name": "@brandonlehmann/web3",
-  "version": "3.1.3",
+  "version": "3.1.4",
   "description": "A web3 helper library for managing provider connections, contracts, and web3 providers",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -39,9 +39,7 @@
     "eslint-plugin-standard": "^5.0.0",
     "ts-node": "^10.6.0",
     "typedoc": "^0.22.13",
-    "typescript": "^4.6.2",
-    "webpack": "^5.70.0",
-    "webpack-cli": "^4.9.2"
+    "typescript": "^4.6.2"
   },
   "dependencies": {
     "@babel/core": "^7.17.9",
@@ -80,6 +78,8 @@
     "style-loader": "^3.3.1",
     "url": "^0.11.0",
     "web3": "^1.7.3",
-    "web3modal": "^1.9.7"
+    "web3modal": "^1.9.7",
+    "webpack": "^5.70.0",
+    "webpack-cli": "^4.9.2"
   }
 }
