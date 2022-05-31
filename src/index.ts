@@ -39,6 +39,7 @@ import numeral from 'numeral';
 import fetch, { Headers, Request, Response } from 'cross-fetch';
 import * as dotenv from 'dotenv';
 import localStorage from './StorageWrapper';
+import PaymentSplitter from './PaymentSplitter';
 
 export {
     ABI,
@@ -76,7 +77,8 @@ export {
     IContractCall,
     localStorage,
     Verifier,
-    dotenv
+    dotenv,
+    PaymentSplitter
 };
 
 export default Web3Controller;
