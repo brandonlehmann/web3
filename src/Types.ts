@@ -18,7 +18,7 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 // SOFTWARE.
 
-import { connectors, IProviderOptions } from 'web3modal';
+import { IProviderOptions } from 'web3modal';
 import WalletConnectProvider from '@walletconnect/web3-provider';
 import { CoinbaseWalletSDK } from '@coinbase/wallet-sdk/dist/CoinbaseWalletSDK';
 import { ethers } from 'ethers';
@@ -152,15 +152,6 @@ export const DefaultProviderOptions: IProviderOptions = {
             await provider.enable();
             return provider;
         }
-    },
-    'custom-twt': {
-        display: {
-            name: 'Trust Wallet',
-            description: 'Connect to your Trust Wallet',
-            logo: 'https://raw.githubusercontent.com/Web3Modal/web3modal/master/src/providers/logos/trust.svg'
-        },
-        package: 'twt',
-        connector: connectors.injected
     }
 };
 
