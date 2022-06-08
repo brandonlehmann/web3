@@ -241,12 +241,43 @@ export default class Web3Controller extends EventEmitter {
 
         for (const chain of json.filter(elem => elem.rpc.length !== 0)) {
             chain.rpc = chain.rpc.filter(elem => !elem.includes('$'));
+
+            if (typeof chain.explorers === 'undefined') {
+                chain.explorers = [];
+            }
+
             result.set(chain.chainId, chain);
         }
 
         ChainListCache = result;
 
         return result;
+    }
+
+    /**
+     * Retrieves the explorer URL for the provided chain
+     *
+     * @param chainId
+     * @param standard
+     */
+    public static async getExplorers (
+        chainId: number,
+        standard: 'EIP3091' | 'none' | 'all' = 'EIP3091'
+    ): Promise<string[]> {
+        await Web3Controller.getChains();
+
+        const chain = ChainListCache.get(chainId);
+
+        if (!chain) {
+            return [];
+        }
+
+        if (standard !== 'all') {
+            chain.explorers = chain.explorers.filter(elem => elem.standard === standard);
+        }
+
+        return chain.explorers
+            .map(elem => elem.url);
     }
 
     public on(event: 'accountsChanged', listener: (accounts: string[]) => void): this;
@@ -268,6 +299,13 @@ export default class Web3Controller extends EventEmitter {
      */
     public async chainId (): Promise<number> {
         return (await this.provider.getNetwork()).chainId;
+    }
+
+    /**
+     * Returns the explorer URLs (if available) for the currently connected chain
+     */
+    public async explorers (): Promise<string[]> {
+        return Web3Controller.getExplorers(await this.chainId(), 'all');
     }
 
     /**

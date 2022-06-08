@@ -149,7 +149,7 @@ export default class Contract extends ethers.Contract implements IContractType {
     public call (name: string, ...params: any[]): Contract {
         const result = new Contract(this._addressOrName, this._contractInterface, this._signerOrProvider);
 
-        result._callChain = this._callChain;
+        result._callChain = this._callChain.slice(); // make a copy
         result._callChain.push(result.callMethod(name, ...params));
 
         return result;
